@@ -1,3 +1,14 @@
 \chapter{Related Work}
+Stochastic query synthesis im allgemeinen siehe paper (in Citavi unter Stochastic query)
+Neural PDE solver siehe Musekamp et al.
+In this thesis we will put use of the Metropolis-adjusted Langevin algorithm, in short MALA. This algorithm was first proposed by Besag ~\cite{BesagComment}
+and later further developed by Roberts and Tweedie ~\cite{roberts1996exponential}. MALA is an implementation of the Makrov chain Monte Carlo, MCMC and converges to the searched posterior distribution $\pi(x)$.
+We require a distribution proportional to 
+$\pi(x), \quad \pi(x) \propto \tilde{\pi}(x)$
 
-Describe relevant scientific literature related to your work.
+ and we need a formula to calculate the next 
+proposed sample. The formula is given with 
+$N(M_{n-1} + \frac{1}{2} h \nabla \log(\tilde{\pi}(M_{n-1})), h I_k)$
+
+-related work MCMC?
+-Vollstädigkeitshalber: erst Query synthesis, dann PDE, dann MCMC, dann Metropolis-Hastings, dann MALA
