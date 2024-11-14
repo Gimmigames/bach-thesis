@@ -136,19 +136,27 @@ To get close to the posterior,
 it starts with a mean-field approximation and then refines it 
 locally with inexpensive operatioxns. From that refined region, 
 it is possible to generate samples.
-\subsection{Metropolis-Hastings MCMC}
-Required: 
-\begin{enumerate}
-    \item Möchte von $\pi(x) = \frac{f(x)}{K}$ samplen, $f(x)$ muss bekannt sein, $x\in\mathbb{R}^d$
-    \item Sample from easier $g(x)$, e.g. $g(x_{t+1}|x_t)=\mathcal{N}(x_t, \sigma^2)$
-    \item accept or reject the sample based on $f(x)$ and $g(X)$
-\end{enumerate}
-\begin{itemize}
-    \item Weiterentwicklung vom Metropolis algorithm~\cite{metropolis1953}
-    \item vom symmetrischen Case zum generellen
-    \item Start -> Verteilung die Proportional ist 
-    \item 
-\end{itemize}
+\subsection{Metropolis-Hastings algorithm}
+The Metropolis-Hastings algorithm is one possible implementation to constructing the Makrov chain in MCMC and 
+is developed by Hastings~\cite{hastings1970}.
+Let $\pi(x)$ be the density we want to take samples from, called the target density.
+Then the algorithm requires a distribution proportional to the target denisity, $\pi(x)\propto\tilde{\pi}(x)$.
+To determine the next state in the Makrov chain, it also requires a proposal kernal $q$.
+
+The transition from the Makrov state $X_t$ to $X_{t+1}$ is then defined as follows.
+Sample a new State  $X_{t+1}$ from $q(y | X_t)$. 
+Accept or reject the State with the acceptance probability
+\[ 
+    \alpha(X_t+, X_{t+1}) = 
+    \begin{cases}
+        \min \left\{ \frac{\tilde{\pi}(X_{t+1}) q(X_t|X_{t+1} )}{\tilde{\pi}(X_t) q(X_{t+1}|X_t)}, 1 \right\} & \text{if } \tilde{\pi}(X_t)q(X_{t+1}|X_t)>0 \\
+        1 & \text{otherwise}
+    \end{cases}     
+\]
+If accepted, then set $X_{t+1}=X_{t+1}$, otherwise $X_{t+1}  = X_t$ and restart the process.
+
+Metropolis-Hastings is a further developlment of the Metropolis algorithm, which was introduced by Metropolis et al.~\cite{metropolis1953} and required $q$ to be symmetrical.
+
 \subsection{Hamilton Monte Carlo}
 
 \subsection{Metropolis adjusted Langevin algorithm}
