@@ -137,10 +137,10 @@ it starts with a mean-field approximation and then refines it
 locally with inexpensive operatioxns. From that refined region, 
 it is possible to generate samples.
 \subsection{Metropolis-Hastings algorithm}
-The Metropolis-Hastings algorithm is one possible implementation to constructing the Makrov chain in MCMC and 
+The Metropolis-Hastings algorithm is one possible implementation of constructing the Makrov chain in MCMC and 
 is developed by Hastings~\cite{hastings1970}.
 Let $\pi(x)$ be the density we want to take samples from, called the target density.
-Then the algorithm requires a distribution proportional to the target denisity, $\pi(x)\propto\tilde{\pi}(x)$.
+Then, the algorithm requires a distribution proportional to the target denisity, $\pi(x)\propto\tilde{\pi}(x)$.
 To determine the next state in the Makrov chain, it also requires a proposal kernal $q$.
 
 The transition from the Makrov state $X_t$ to $X_{t+1}$ is then defined as follows.
@@ -157,6 +157,45 @@ If accepted, then set $X_{t+1}=X_{t+1}$, otherwise $X_{t+1}  = X_t$ and restart 
 
 Metropolis-Hastings is a further developlment of the Metropolis algorithm, which was introduced by Metropolis et al.~\cite{metropolis1953} and required $q$ to be symmetrical.
 
-\subsection{Hamilton Monte Carlo}
+In Random Walk Metropolis, the proposals are drawn with i.i.d and fixed symmetric densities $Z_i$,
+for example $Z_i\sim N(0,\sigma^2 I_d)$.
+Each new proposal therefore has the form $X_{i+1} = X_i + Z_{i+1}$~\cite{rosenthal2011optimal}.
+\todo{Umschreiben und Quelle wechseln}
+\subsection{Hamiltonian Dynamics}
+\todo{Ausformulieren}
+-originated from physics
+-important formulas
+\subsection{Hamiltonian Monte Carlo}
+Hamiltonian Monte Carlo is an adaptation of Metropolis-Hastings, which uses 
+Hamiltonian dynamics to sample from a unknown distribution, in bayesian conext the posterior distribution.
+It was originally published under the name of Hybrid Monte Carlo by Duane et al.~\cite{DUANE1987216}, but 
+it became known under the name of Hamiltonian Monte Carlo, due to the more specific formulation.
+Since Hamiltonian dynamics normally occurs in the physical context, the terms are also adopted in the machine learning context.
 
+As we saw in the previous section , Hamiltonian dynamics require two $d$-dimensional vectors, one describing the position $q_i$, with $i=1,...,d$ entries. 
+The vector here is the one we want to sample from, and consists in difference to normal Hamiltonian dynamics out of the network parameters. 
+\begin{align*}
+    \frac{dq_i}{d_t}&=\frac{\partial H}{\partial p_i} \\
+    \frac{dp_i}{d_t}&=-\frac{\partial H}{\partial q_i}
+\end{align*}
+
+for $i=1,...,d$~\cite{MR2858447}. 
+
+
+  
+
+\begin{itemize}
+    \item p two dimensional vektor momentum -> $m\cdot v$
+    \item q two dimensional vektor position 
+    \item $U(q)$ potential energy $U(q)\propto$ height of surface and kinetic energy
+    \item kinetic energy $K(p)=\frac{\abs{p}^2}{2m}$
+    \item constant velocity $v=\frac{p}{m}$
+\end{itemize}   
 \subsection{Metropolis adjusted Langevin algorithm}
+similar to RMW, but proposal increment distribution $Z_i$ is defined as 
+\[
+Z_i \sim N(\frac{\sigma^2}{2}\nabla\log\pi(X_n),\sigma^2I_d)
+\]
+optimal acceptance rate $A(l_{opt})=0.574$
+
+\listoftodos[Todos here]
