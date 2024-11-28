@@ -118,8 +118,8 @@ flycheck_*.el
 .pdf
 
 ## Bibliography auxiliary files (bibtex/biblatex/biber):
-*.bbl
-*.bcf
+*.bbl*
+*.bcf*
 *.blg
 *-blx.aux
 *-blx.bib
