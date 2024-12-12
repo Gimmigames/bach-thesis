@@ -1,0 +1,51 @@
+\chapter{Implementation}\label{chap:implementation}
+The main goal is to implement MALA introduced in chapter \ref{chap:k2}.
+Before we go into more detail and implement it directly into AL4PDE, 
+we will firstly have a look at one iteration of MALA.
+\begin{algorithm}
+    \caption{Metropolis-adjusted langevin algorithm iteration-step}
+    \label{alg:MALA}
+    \begin{algorithmic}[1] 
+        \Function{MALA-step}{$\sigma^2,X_n$}\label{line:inputMALA}
+            \State $gradPi = \text{gradient von $\pi(X_n)$}$
+            \State $proposal = N(\frac{\sigma^2}{2} gradPi, \sigma^2I_d)$
+            \State $a = \min(\frac{proposal}{\pi(X_n)},1)$\label{line:metropolis-start}
+            \State $u = \text{take uniform random value between $0$ and $1$}$
+            \If{$u \leq a$}
+                \State \textbf{return} $proposal$
+            \EndIf
+            \State \textbf{return} $X_n$\label{line:metropolis-end}
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+\\
+For one iteration we require the old value of the makrov chain $X_n$, and 
+the scaling operator $\sigma^2$ as we see in line \ref{line:inputMALA}. We generate the proposal,
+here called "\textit{proposal}", by sampling from a normal distribution with 
+$\sigma$ and with the gradient of the posterior distriution.
+We then perform the metropolis update from line \ref{line:metropolis-start} to line \ref{line:metropolis-end}.
+If we not only want to perform one step, but rather generate a large amount of samples, we have to add an
+array that keeps track of the samples. That array should then match the posterior distribution.
+We additionly requrire a starting value and a number defining the iteration steps.
+\begin{algorithm}
+    \caption{Metropolis-adjusted langevin algorithm}
+    \begin{algorithmic}[1] 
+        \Function{MALA}{$\sigma^2,n$}\Comment{n number of iterations, $\sigma^2$ scaling operator}
+            \State $X_{curr} = random()$ \Comment{Random starting value}
+            \State $posteriorArray = $ empty array with length $n$\Comment{initialize posteriorArray}
+            \State $currPost = \pi(X_{curr})$
+            \For{$i$ in range($n$)}
+                \State $gradPi = \text{gradient von $\pi(X_{curr})$}$
+                \State $X_{prop} = N(\frac{\sigma^2}{2} gradPi, \sigma^2I_d)$\Comment{Calculate the proposal}
+                \State $a = \frac{\pi(X_{prop})}{\pi(X_{curr})}$\Comment{Metropolis-update}
+                \If{$random(0,1)\leq a$}
+                    \State $X_{curr} = X_{prop}$
+                    \State $\pi(X_{curr}) = \pi(X_{prop})$\Comment{update $\pi(X_{curr})$ here to improve computational resources}
+                \EndIf
+                \State $posteriorArray[i] = X_{curr}$
+            \EndFor
+            \State \textbf{return} $posteriorArray$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
