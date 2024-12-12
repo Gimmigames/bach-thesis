@@ -4,7 +4,7 @@ Before we go into more detail and implement it directly into AL4PDE,
 we will firstly have a look at one iteration of MALA.
 \begin{algorithm}
     \caption{Metropolis-adjusted langevin algorithm iteration-step}
-    \label{alg:MALA}
+    \label{alg:MALA-step}
     \begin{algorithmic}[1] 
         \Function{MALA-step}{$\sigma^2,X_n$}\label{line:inputMALA}
             \State $gradPi = \text{gradient von $\pi(X_n)$}$
@@ -24,11 +24,14 @@ the scaling operator $\sigma^2$ as we see in line \ref{line:inputMALA}. We gener
 here called "\textit{proposal}", by sampling from a normal distribution with 
 $\sigma$ and with the gradient of the posterior distriution.
 We then perform the metropolis update from line \ref{line:metropolis-start} to line \ref{line:metropolis-end}.
-If we not only want to perform one step, but rather generate a large amount of samples, we have to add an
-array that keeps track of the samples. That array should then match the posterior distribution.
-We additionly requrire a starting value and a number defining the iteration steps.
+The whole algorithm is displayed in Alg.\ref{alg:MALA}. The main difference is the factor $n$, representing the number
+of iterations we do to approximate the posterior. If the proposal is accepted, it becomes the new state 
+of our makrov chain and is written into an $posteriorArray$ (instead of getting returned like in our previous example), which keeps track of all samples we take.
+Note that even if we are rejecting one proposal, we (re-)write our current value into the $posteriorArray$.
+
 \begin{algorithm}
     \caption{Metropolis-adjusted langevin algorithm}
+    \label{alg:MALA}
     \begin{algorithmic}[1] 
         \Function{MALA}{$\sigma^2,n$}\Comment{n number of iterations, $\sigma^2$ scaling operator}
             \State $X_{curr} = random()$ \Comment{Random starting value}
