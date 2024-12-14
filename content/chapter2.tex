@@ -170,10 +170,42 @@ Hamiltonian Monte Carlo is an adaptation of Metropolis-Hastings, which uses
 Hamiltonian dynamics to sample from a unknown distribution, in bayesian conext the posterior distribution.
 It was originally published under the name of Hybrid Monte Carlo by Duane et al.~\cite{DUANE1987216}, but 
 it became known under the name of Hamiltonian Monte Carlo, due to the more specific formulation.
-Since Hamiltonian dynamics normally occurs in the physical context, the terms are also adopted in the machine learning context.
+Since Hamiltonian dynamics normally occurs in the physical context, the terms are also adopted in the machine learning context. 
 
-As we saw in the previous section , Hamiltonian dynamics require two $d$-dimensional vectors, one describing the position $q_i$, with $i=1,...,d$ entries. 
+As we saw in the previous section , Hamiltonian dynamics requires one $d$-dimensional vector, describing the position $q_i$, with $i=1,...,d$ entries. 
 The vector here is the one we want to sample from, and consists in difference to normal Hamiltonian dynamics out of the network parameters. 
+The probability denisity for $q$ is defined under the canonical distribution with:
+\begin{align}
+P(q)\propto \exp(-U(q))\label{eq:2.1}
+\end{align}
+
+
+for some energy function $U(q)$.
+Since we want to use dynamical methods, we require
+the "momentum" vector, $p_i$, with $i=0,...,d$ entries. 
+Together, the distribution combines to:
+\begin{align}
+P(q,p)\propto \exp(-H(q,p))\label{eq:2.2}
+\end{align}
+Where $H(q,p) = U(q)+K(p)$ is called the \textit{Hamiltonian}, 
+$U(q)$ is the potential energy, and $K(p)$ is the kinetic energy. 
+If we insert this into the equation \ref{eq:2.1}, we get:
+\begin{align}
+    P(q,p)\propto\exp(-U(q))\exp(-K(p))\label{eq:2.3}
+\end{align}
+
+Since we are in a bayesian context, and the main focus is to sample from the posterior distribution, we can display $U(q)$ as: 
+\[
+U(q) = -\log[\pi(q)L(q|D)]
+\]
+with $\pi(q)$ is the prior density, and $L(q|D)$ is the likelihood.
+\todo{warum darf ich U/K so definieren? -> Formel K: $\sum_{i=1}^d \frac{p_i^2}{2m_i}$ \& Neal hier zitieren!}
+
+
+
+% Similarly, we require
+% the "momentum" vector, $p_i$, with $i=0,...,d$ entries. Obviously the momentum is not the actual movement of particals here (especially since there are no particals in this use-case),
+% but it is defined as the gradient of some function $U(q)$, called the potential energy. 
 \begin{align*}
     \frac{dq_i}{d_t}&=\frac{\partial H}{\partial p_i} \\
     \frac{dp_i}{d_t}&=-\frac{\partial H}{\partial q_i}
