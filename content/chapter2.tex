@@ -147,7 +147,7 @@ The transition from the Makrov state $X_t$ to $X_{t+1}$ is then defined as follo
 Sample a new State  $X_{t+1}$ from $q(y | X_t)$. 
 Accept or reject the State with the acceptance probability
 \[ 
-    \alpha(X_t+, X_{t+1}) = 
+    \alpha(X_t, X_{t+1}) = 
     \begin{cases}
         \min \left\{ \frac{\tilde{\pi}(X_{t+1}) q(X_t|X_{t+1} )}{\tilde{\pi}(X_t) q(X_{t+1}|X_t)}, 1 \right\} & \text{if } \tilde{\pi}(X_t)q(X_{t+1}|X_t)>0 \\
         1 & \text{otherwise}
@@ -224,9 +224,10 @@ for $i=1,...,d$~\cite{MR2858447}.
     \item constant velocity $v=\frac{p}{m}$
 \end{itemize}   
 \subsection{Metropolis adjusted Langevin algorithm}
+ 
 similar to RMW, but proposal increment distribution $Z_i$ is defined as 
 \[
-Z_i \sim N(\frac{\sigma^2}{2}\nabla\log\pi(X_n),\sigma^2I_d)
+Z_i \sim N((X_N?)\frac{\sigma^2}{2}\nabla\log\pi(X_n),\sigma^2I_d)
 \]
 optimal acceptance rate $A(l_{opt})=0.574$
 
