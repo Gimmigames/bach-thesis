@@ -130,41 +130,13 @@ The result can be seen in \todo{Simulation mit korrekter Step-size }.
 
 \todo{Beschreibung der Grafik}
 
-
-
-
-
-
-% For one iteration we require the old value of the makrov chain $X_n$, and 
-% the learning rate h as we see in line \ref{line:inputMALA}. We generate the proposal,
-% here called "\textit{proposal}", by sampling from a normal distribution with 
-% h and with the gradient of the uncertainty.
-% We then perform the metropolis update from line \ref{line:metropolis-start} to line \ref{line:metropolis-end}.
-% The whole algorithm is displayed in Alg.\ref{alg:MALA}. The main difference is the factor $n$, representing the number
-% of iterations we do to approximate the uncertainty. If the proposal is accepted, it becomes the new state 
-% of our makrov chain and is written into an $posteriorArray$ (instead of getting returned like in our previous example), which keeps track of all samples we take.
-% Note that even if we are rejecting one proposal, we (re-)write our current value into the $posteriorArray$.
-
-% \begin{algorithm}
-%     \caption{Metropolis-adjusted langevin algorithm}
-%     \label{alg:MALA}
-%     \begin{algorithmic}[1] 
-%         \Function{MALA}{$\sigma^2,n$}\Comment{n number of iterations, $\sigma^2$ scaling operator}
-%             \State $X_{curr} = random()$ \Comment{Random starting value}
-%             \State $posteriorArray = $ empty array with length $n$\Comment{initialize posteriorArray}
-%             \State $currPost = \pi(X_{curr})$
-%             \For{$i$ in range($n$)}
-%                 \State $gradPi = \text{gradient von $\pi(X_{curr})$}$
-%                 \State $X_{prop} = N(\frac{\sigma^2}{2} gradPi, \sigma^2I_d)$\Comment{Calculate the proposal}
-%                 \State $a = \frac{\pi(X_{prop})}{\pi(X_{curr})}$\Comment{Metropolis-update}
-%                 \If{$random(0,1)\leq a$}
-%                     \State $X_{curr} = X_{prop}$
-%                     \State $\pi(X_{curr}) = \pi(X_{prop})$\Comment{update $\pi(X_{curr})$ here to improve computational resources}
-%                 \EndIf
-%                 \State $posteriorArray[i] = X_{curr}$
-%             \EndFor
-%             \State \textbf{return} $posteriorArray$
-%         \EndFunction
-%     \end{algorithmic}
-% \end{algorithm}
-
+Since we use the gradient to sample from higher uncertainties, and repreating this process over and over again, later states in the makrov chain should be more 
+beneficial for us then earlier ones. We can make make use of that by instead of using the complete chain as input, we rather only 
+take later states. To still match the amount of samples we use as input for the numerical solver, we also need more chains. 
+If we only take the last state, the chainsize can be choosen freely, but we require an amount of parallel chains matching the input for the numerical solver.
+The result, compared against a random selection and two SBAL methods, with the pool-size being ten thousand and one million are shown in Fig. \ref{fig: ULA-parallel}
+\begin{figure}
+    \caption{Unadjusted langevin alg. parallel}
+    \includegraphics{../data/ULA_parallel.pdf}
+    \label{fig: ULA-parallel}
+\end{figure} 
