@@ -1,24 +1,140 @@
 \chapter{Implementation}\label{chap:implementation}
-% The main goal is to implement MALA introduced in chapter \ref{chap:k2}.
-% Before we go into more detail and implement it directly into AL4PDE, 
-% we will firstly have a look at one iteration of MALA.
-% \begin{algorithm}
-%     \caption{Metropolis-adjusted langevin algorithm iteration-step}
-%     \label{alg:MALA-step}
-%     \begin{algorithmic}[1] 
-%         \Function{MALA-step}{$\sigma^2,X_n$}\label{line:inputMALA}
-%             \State $gradPi = \text{gradient of $\pi(X_n)$}$
-%             \State $proposal = N(\frac{h}{2} gradPi, hI_d)$
-%             \State $a = \min(\frac{proposal}{\pi(X_n)},1)$\label{line:metropolis-start}
-%             \State $u = \text{take uniform random value between $0$ and $1$}$
-%             \If{$u \leq a$}
-%                 \State \textbf{return} $proposal$
-%             \EndIf
-%             \State \textbf{return} $X_n$\label{line:metropolis-end}
-%         \EndFunction
-%     \end{algorithmic}
-% \end{algorithm}
-% \\
+\todo{explain how IC parameters are generated/how IC is generated from IC paramers. Same for PDE p}
+The first goal was to implement MALA introduced in chapter \ref{chap:k2}.
+As proposal distribution we used the discretized langevin diffusion: 
+\[
+N(U_{n-1}\frac{h}{2} \nabla \pi(U_{n-1}), hI_d)
+\]
+To explain what exactly $U$ is, we first have to take a look how the uncertainty is created.
+In general we only need the IC and PDE parameter. One difference is in the framework AL4PDE 
+we first fetch the PDE parameters in a normed version, and using that information we calculate 
+the correct PDE parameters. Similarly for the IC, we first only fetch the IC parameters - the 
+phase $\phi$ and the amplitude $A$ - and with that and the PDE parameters then calculate the correct IC.
+From this followes that if we calculate the gradient of the uncertainty, we ultimatly get 
+values for both the IC paramters and the normed PDE paramters. Our proposal thereby has to be created
+by utilising the normed PDE parameters and the IC parameters.
+ 
+\begin{algorithm}
+    \caption{MALA proposal generation}
+    \label{alg:MALA-proposal}
+    \begin{algorithmic}[1] 
+        \Function{generate\_prop}{$icp, pdepn, step\_size$}
+            \Comment{ $step\_size$ learning rate}
+            \State $icp\_prop = N(icp + step\_size/2\cdot icp.grad, step\_size\cdot I).sample()$
+            \State $pdepn\_prop = N(pdepn + step\_size/2\cdot pdepn.grad, step\_size\cdot I).sample()$
+            \State \textbf{return} $icp\_prop, pdepn\_prop$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+$icp\_proposal$ is the proposal for the initial condition parameters, $pdepn\_proposal$ is the proposal for the
+normed PDE parameters, $I$ is the identity matrix, $.sample()$ 
+samples from the normal distribution.
+
+%mehr auf torch eingehen? Eher in Method?
+To get the values for $icp.grad$ and $pdep.grad$ we utilize the $torch.backward()$ function\footnote{https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html}.
+It differentiates our ?.
+\todo{In Method auf torch eingehen und beschreiben was ich verwende}
+
+We apply the function directly onto the logratithmic scaled uncertainty, demonstrated in Alg. \ref{alg:unc-calc}:
+  
+\begin{algorithm}
+    \caption{uncertainty calculation}
+    \label{alg:unc-calc}
+    \begin{algorithmic}[1] 
+        \Function{uncertainty\_calculation}{$ic, pdep$}
+            \State $unc = model\_uncertainty(ic, pdep)$
+            \State $log\_unc = log(unc)$
+            \State $log\_unc.backward()$
+            \State \textbf{retrun} $unc$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+After proposing a new state, a metropolis-hasings step is done evaluating if the proposal
+is accepted or rejected. Since we sample from a normal distribution, we can leave out 
+the proposal function from our acceptence step, effectifly doing a metropolis step. 
+We only require the ratio between the old value for the uncertainty, and the proposed one.
+If the ratio is higher than a random number between 0 and 1, we accept.
+By accepting, we save the proposed values for the IC and PDE parameters in the makrov chain, represented by a list, and use the values
+as base for our next iteration. If we reject, the old values are saved in the makrov chain and used
+again as base for our next iteration. This comes with the consequence of having samples multiple times
+in the makrov chain. The metropolis can be seen in Alg.~\ref{alg:metropolis}
+With $unc\_old(IC, \lambda)$ we denote the uncertainty created with the IC and the PDE parameters $\lambda$. 
+\begin{algorithm}
+    \caption{Metropolis step }
+    \label{alg:metropolis}
+    \begin{algorithmic}[1] 
+        \Function{accept\_or\_reject}{$unc\_old(IC_0, \lambda_0), unc\_prop(IC_1, \lambda_1), complete\_list$}
+            \State $\alpha = unc\_old(IC_0, \lambda_0)/unc\_prop(IC_1, \lambda_1)$
+            \If{$random()<=\alpha$}\Comment{$accept$}
+            \State $complete\_list.append(IC\_params_1, IC_1, \lambda\_norm_1, \lambda_1)$
+            \State \textbf{return }$IC_1, IC\_params_1, \lambda_1, \lambda\_norm_1, unc\_prop$
+            \Else \Comment{$reject$}
+            \State $complete\_list.append(IC\_params_0, IC_0, \lambda\_norm_0, \lambda_0)$
+            \State \textbf{return }$IC_0, IC\_params_0, \lambda_0, \lambda\_norm_0, unc\_old$
+            \EndIf
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+If we put everything together the whole code is in Alg. ~\ref{alg:MALA}. To start the makrov chain, the first values are drawn at random, from samples that have not been trained on.
+
+
+
+ 
+\begin{algorithm}
+    \caption{MALA}
+    \label{alg:MALA}
+    \begin{algorithmic}[1] 
+        \Function{MALA}{$chain\_size, step\_size$}
+            \State $complete\_list = []$
+            \State $ic, icp, p, pn = initialize\_first\_values()$
+            \State $unc\_cur = uncertainty\_calculation(ic, p)$
+            \For{$i$ in range($chain\_size$)}
+            \State $icp\_prop, pdepn\_prop = generate\_proposal(icp, pn, step\_size)$
+            \State $pdep\_prop = get\_pde\_params(pdepn\_prop)$
+            \State $ic\_prop = get\_ic(icp\_prop, pdep\_prop)$
+            \State $unc\_prop = uncertainty\_clarification(ic\_prop, pdep\_prop)$
+            \State $ic, icp, p, pn, unc\_cur = accept\_or\_reject(unc\_cur, unc\_prop, complete\_list)$
+            \EndFor
+        \State \textbf{return } $complete\_list$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
+
+At the end we have a makrov chain containing $chain\_size$ samples. We then used the whole chain as input for our numerical solver to generate a solution and thereby 
+used as training set for our neural PDE solver. The Loss function for the MALA algorithm with the step-size of 0.1 is shown at Fig. ~\ref{fig:MALA-loss}. 
+We can see on the x-axis the required amount of samples 
+for our numerical solver to label. Since we use the whole chain as input data, this means we are doubling our chain-size each iteration, starting by 256.
+On the y-axis we see the root mean square error (RMSE). As we can see the loss function is bearly decreasing,
+and is worse than the random selection of samples.
+The main reason are the parameters that appear multiple times or more than once in the chain. 
+If the numerical solver solves the same PDE with the same ICs and adds them to the training set, 
+our neural network will thereby have multiplicatives in its training set. 
+\begin{figure}
+    \caption{MALA vs. Random}
+    \includegraphics{../data/random_mala.pdf}
+    \label{fig:MALA-loss}
+\end{figure}
+
+We solve this by removing the metropolis-hastings step, and just accepting every state proposed. This comes with the 
+disadvantage of not converging to the target density $\pi$, but we will still sample from regions with higher uncertainties. 
+By removing the acceptance step we are sampling with the unadjusted langevin algorithm, described in Section. \todo{refs}
+One key change to the original ULA for our experiments we will make is the adding of the stepsize in the mean of the normal distribution.
+This modifies the known ULA formula to:
+\[
+    N(U_{n-1}\frac{h}{2} \nabla \pi(U_{n-1}), hI_d)
+\]
+As you may have noticed, this is the same formula as previously used in MALA. 
+
+The result can be seen in \todo{Simulation mit korrekter Step-size }.
+
+\todo{Beschreibung der Grafik}
+
+
+
+
+
+
 % For one iteration we require the old value of the makrov chain $X_n$, and 
 % the learning rate h as we see in line \ref{line:inputMALA}. We generate the proposal,
 % here called "\textit{proposal}", by sampling from a normal distribution with 
