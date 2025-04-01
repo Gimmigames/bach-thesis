@@ -29,14 +29,14 @@
 
 \usepackage[
   title={Stochastic Query Synthesis for Neural PDE Solvers},
-  author={Finn U.},
+  author={Finn Ullrich},
   type=bachelor,
   institute=iaas, % or other institute names - or just a plain string using {Demo\\Demo...}
   course={Informatik},
-  examiner={Prof.\ Dr.\ Uwe Fessor},
-  supervisor={Dipl.-Inf.\ Roman Tiker,\\Dipl.-Inf.\ Laura Stern,\\Otto Normalverbraucher,\ M.Sc.},
-  startdate={July 5, 2018},
-  enddate={January 5, 2019}
+  examiner={Prof.\ Dr.\ Mathias Niepert},
+  supervisor={Daniel Musekamp,\ M.Sc.},
+  startdate={October 28, 2025},
+  enddate={April 28, 2019}
 ]{scientific-thesis-cover}
 
 \input{acronyms}
@@ -80,7 +80,16 @@
 %auch im Stil vom Inhaltsverzeichnis
 \section*{Abstract}
 
-<Short summary of the thesis>
+PDEs are highly influential in physics and are describing various phenomena
+in the world, from wave movement to electro-magnetics. The problem arises
+when one tries to solve them, which requires enormous computing power for a
+numerical solution. Therefore, Musekamp et al. created a benchmark, which
+investigates active learning to get an approximation of the solution. In this
+work, we optimize the currently used pool-based sampling method by replacing
+it with stochastic query synthesis sampling. Instead of sampling from the pool
+set we will use the unadjusted Langevin algorithm to create Makrov chains
+which we then can sample from. We will show that this approaches enriches the
+diversity
 
 \cleardoublepage
 
