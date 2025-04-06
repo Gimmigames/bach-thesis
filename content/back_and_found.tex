@@ -5,25 +5,27 @@
 \todo{Initial conditions und Boundary conditions beschreiben}
 \todo{Method \& Experiment as sections}
 \todo{internes neuronales Netzwerk nicht im Detail}
+\todo{Basics erst allgemein, dann }
+\todo{auf torch eingehen}
 Since the paper resolves around solving partial differential equations (PDEs) with neural networks, 
 at first it is important to understand what exactly a PDE is. 
-A PDE is an equation with multiple independent variables, one or more dependent variables 
-and involves its partial derivatives. The 
-general form of a first order PDE with two independent variables can be written as:
-\[
-F(x,y,u(x,y), \frac{\partial u}{\partial x}u(x,y),\frac{\partial u}{\partial y}u(x,y))=0
-\]
-Here $x$ and $y$ serve as the independent variable, and $u$ is the variable dependent of $x$ and $y$.~\cite{strauss2007partial} 
-One of the most common example is the one dimensional wave equation explaining the motion of a wave over time: 
-\[\frac{\partial^2u}{\partial t^2} = c^2 \frac{\partial^2u}{\partial x^2}\]
+We have a D-dimensional spatial domain $\mathcal{X}$, $x = [x_1,x_2,\dots,x_D]^\top \in \mathcal{X}$ and  
+a temporal domain $t\in[0, T]$.
+(Brandstetter et al., 2021):
+\begin{align}
+    &\partial_t u = F(\lambda,t,x,u,\partial_xu,\partial_{xx}u,\dots), && (t,x)\in[0,T]\times \mathbb{X} \\
+    &u(0,x)=u^0(x),\hspace{2cm}\mathcal{B}[u](t,x)=0 && x\in\mathbb{X}, (t,x)\in [0,T]\times\partial\mathbb{X}  
+\end{align}
+We want to know the unique solution $u: [0,T]\times\mathbb{X}\rightarrow\mathbb{R}$ using 
+the initial conditions (IC) $u(0,x)=u^0(x)$ and its boundary conditions $\mathcal{B}[u](t,x)=0$.
+Initial conditons describe the initial state of the system while boundary conditions define the 
+PDE at the definition boundaries. 
+Both conditions are necessary to get a unique solution.
 
-With c being a PDE parameter.~\cite{olver2014introduction}. \\
 
-Usually, PDEs have multiple solutions. 
-In order to restrict the results, and in the best case to arrive at a unique one, 
-PDEs require one initial conditions, which define an initial value and  
-boundary conditions, 
-which define how the PDE should behave at the limits of the domain~\cite{borthwick2017introduction}.
+
+
+
 \section{Active learning}
 Active learning is a subfield of machine learning 
 where the model is able to choose the data it wants to learn from. 
