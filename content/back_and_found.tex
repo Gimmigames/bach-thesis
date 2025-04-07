@@ -4,48 +4,48 @@
 %internes neuronales Netzwerk nicht im Detail}
 %Basics erst allgemein, dann }
 %auf torch eingehen}
-Since the paper resolves around solving partial differential equations (PDEs) with neural networks, 
-at first it is important to understand what exactly a PDE is. 
-We have a D-dimensional spatial domain $\mathcal{X}$, $x = [x_1,x_2,\dots,x_D]^\top \in \mathcal{X}$ and  
-a temporal domain $t\in[0, T]$.
-(Brandstetter et al., 2021):
+Since this paper is about solving partial differential equations (PDEs) with neural networks, it is important to understand what exactly a PDE is. 
+We have a D-dimensional spatial domain $\mathcal{X}$, $x = [x_1,x_2,\dots,x_D]^\top \in \mathcal{X}$, and a temporal domain $t\in[0, T]$ (Brandstetter et al., 2021):
+\begin{align} &\partial_t u = F(\lambda,t,x,u,\partial_xu,\partial_{xx}u,\dots), && (t,x)\in[0,T]\times \mathbb{X} \\ &u(0,x)=u^0(x),\hspace{2cm}\mathcal{B}[u](t,x)=0 && x\in\mathbb{X}, (t,x)\in[0,T]\times\partial\mathbb{X} \end{align}
+We want to know the unique solution $u: [0,T]\times\mathbb{X}\rightarrow\mathbb{R}$ with the initial conditions (IC) $u(0,x)=u^0(x)$ and its boundary conditions $\mathcal{B}[u](t,x)=0$.
+The initial conditions describe the initial state of the system, while the boundary conditions define the PDE at the definition boundaries. 
+Both conditions are necessary to obtain a unique solution.
+PDEs play an important role in the modern world of physics, for example in the heat equation, which describes how heat is distributed in an area over time:
+\[ \partial_tu=\Delta u \] with $\Delta u = \sum^d_{i=1}\partial_{x^ix^i}u$. 
+For this work, the Combined Equation (CE) proposed by Brandstetter et al. (2021) is most relevant:
 \begin{align}
-    &\partial_t u = F(\lambda,t,x,u,\partial_xu,\partial_{xx}u,\dots), && (t,x)\in[0,T]\times \mathbb{X} \\
-    &u(0,x)=u^0(x),\hspace{2cm}\mathcal{B}[u](t,x)=0 && x\in\mathbb{X}, (t,x)\in [0,T]\times\partial\mathbb{X}  
-\end{align}
-We want to know the unique solution $u: [0,T]\times\mathbb{X}\rightarrow\mathbb{R}$ using 
-the initial conditions (IC) $u(0,x)=u^0(x)$ and its boundary conditions $\mathcal{B}[u](t,x)=0$.
-Initial conditons describe the initial state of the system while boundary conditions define the 
-PDE at the definition boundaries. 
-Both conditions are necessary to get a unique solution.
-PDEs play an important role in the modern world of physics, for example the heat equation which describes 
-how heat is distributed in an area over time:
-\[
-\partial_tu=\Delta u
-\]
-with $\Delta u = \sum^d_{i=1}\partial_{x^ix^i}u$. 
-For this work mainly relevant is the Combined Equation (CE) proposed by Brandstetter et al. (2021):
-\begin{align}
-    [\partial_t u+\partial_x (\alpha u^2-\beta\partial_x u+\gamma\partial_{xx}u)]=\delta(t,x),\\
-    u(0,x)=\delta(0,x),\hspace{2cm}\delta(t,x)=\sum_{j=1}^J A_j \sin(\omega_jt+2\pi l_jx/L+\phi_j)
-\end{align}
-It is called combined since based on the PDE parameters, different equations appear. 
-If we summarize the parameters as $\theta_{PDE}=(\alpha,\beta,\gamma)$, we have $\theta_{PDE}=(0,\eta,0)$ being the heat equation.
-Or with 
-$\theta_{PDE}=(0.5,\eta,0)$ we get the Burgers equation~\cite{burgers} used for fluid simulations.
-
+    [\partial_t u+\partial_x (\alpha u^2-\beta\partial_x u+\gamma\partial_{xx}u)]=\delta(t,x),\\ u(0,x)=\delta(0,x),\hspace{2cm}\delta(t,x)=\sum_{j=1}^J A_j \sin(\omega_jt+2\pi l_jx/L+\phi_j) \end{align}
+It is called combined because the PDE parameters give rise to different equations. 
+If we summarise the parameters as $\theta_{PDE}=(\alpha,\beta,\gamma)$, we have $\theta_{PDE}=(0,\eta,0)$, which is the heat equation.
+Or with $\theta_{PDE}=(0.5,\eta,0)$ we get the Burgers equation~\cite{burgers}, which is used for fluid simulations.
 \section{Active learning}
-If a machine learning model is trained, it requires both 
-Active learning is a subfield of machine learning 
-where the model is able to choose the data it wants to learn from. 
-In typical machine learning, the unlabeled instances are chosen randomly. 
-This method works, but with active learning the cost of labeling decreases, 
-resulting in a more efficient model~\cite{ramirez2017active}.
- Specifically, the model can query an unlabeled data from an oracle, 
- which then labels it~\cite{settles2009active}. 
-There are three main approaches, all 
+Before we explain active learning - a subfield of machine learning - 
+we have to explain how machine learning itself works. In the words of Ayodele (2010): ``Machine
+Learning can still be defined as learning the theory automatically from the data,
+through a process of inference, model fitting, or learning from examples''~\cite{ayodele2010machine}.
+
+But what exactly is ``the data''? There are different strategies how to learn which also define how our machine model 
+learns with data, but we will keep our focus on supervised learning. 
+
+In supervised learning, a model is trained on a training data set consisting of input-output pairs. 
+The input data represents the information we want the model to learn from or make predictions about, 
+while the output data — known as the label — is the expected result for each input.
+Although we often use the term ``classification'', labels are not limited to discrete categories. 
+If the output is a continuous value, the model is performing regression instead of classification.
+From the whole input space, the samples that get added to the training set are chosen at random.
+
+In active learning, we try to minimize the amount of training samples we use as input,
+while keeping the same/better learning curve. This is done by activly choosing the 
+samples for our training set~\cite{ramirez2017active}.
+This means we activly query our input data to get it labeled, therefore getting an output value,
+by a so called oracle. An oracle is just the general term for something that can always label correctly our sample we queried ~\cite{settles2009active}. 
+If we train our ensemble with multiple neural networks, the variance between them can give us an indication about 
+how informative the sample will be. This is called ``uncertainty'' and is modeled via a probabalistic function (Seung et al. 1992):
+\[
+ a_{QbC}(\psi_i):=\frac{1}{N_tN_xN_c}\sum_{j=1}^{N_t}\sum_{k=1}^{N_x}\frac{1}{N_m}\sum_{m=1}^{N_m}\vert\vert\hat{u}_{i,m}(t_j,x_k)- \overline{\hat{u}_i}(t_j, x_k)\vert\vert^2_2
+\] 
+There are three main approaches, all  
 visualised in a very simplified way in Fig.~\ref{fig:AL-overview}. 
-\todo{Umschreiben -training data hinzufügen etc.}
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{../graphics/active_learning.png}
@@ -68,7 +68,6 @@ $x$ and the label $y$. $L^m=\{X,Y\}$ is the training set with m labeled instance
 Now the goal is to create a query strategy Q, 
 which queries samples from $U^n$ to be labeled 
 by the oracle: $U^n \xrightarrow{\text{Q}} L^m$. 
-\todo{Uncertainty besser erklären}
 The most common query strategy is 
 to select the instances the model has the least certainty in.
 This approach is called "Uncertainty-based",
