@@ -1,1 +1,8 @@
 \chapter{Experiments}
+All experiments are based on the AL4PDE framework. We sample from the combined equation:
+\[
+\partial_tu+\partial_x(\alpha u^2-\beta\partial_xu+\gamma\partial_{xx}u)=0
+\]
+with periodic boundary conditions and a slightly different IC generator that removes random frequency bins. This is required
+to allow us to get a continuues function for the gradient calculation. As PDE Parameters for the 
+input space we have $\alpha\beta\gamma$. 
