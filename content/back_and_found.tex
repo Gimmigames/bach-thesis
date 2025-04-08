@@ -18,11 +18,12 @@ For this work, the Combined Equation (CE) proposed by Brandstetter et al. (2021)
 It is called combined because the PDE parameters give rise to different equations. 
 If we summarise the parameters as $\theta_{PDE}=(\alpha,\beta,\gamma)$, we have $\theta_{PDE}=(0,\eta,0)$, which is the heat equation.
 Or with $\theta_{PDE}=(0.5,\eta,0)$ we get the Burgers equation~\cite{burgers}, which is used for fluid simulations.
+\todo{Überleitung?}
 \section{Active learning}
 Before we explain active learning - a subfield of machine learning - 
 we have to explain how machine learning itself works. In the words of Ayodele (2010): ``Machine
 Learning can still be defined as learning the theory automatically from the data,
-through a process of inference, model fitting, or learning from examples''~\cite{ayodele2010machine}.
+through a process of inference, model fitting, or learning from examples''.
 
 But what exactly is ``the data''? There are different strategies how to learn which also define how our machine model 
 learns with data, but we will keep our focus on supervised learning. 
@@ -32,15 +33,16 @@ The input data represents the information we want the model to learn from or mak
 while the output data — known as the label — is the expected result for each input.
 Although we often use the term ``classification'', labels are not limited to discrete categories. 
 If the output is a continuous value, the model is performing regression instead of classification.
-From the whole input space, the samples that get added to the training set are chosen at random.
+From the whole input space, the samples that get added to the training set are chosen at random.~\cite{ayodele2010machine}
 
 In active learning, we try to minimize the amount of training samples we use as input,
-while keeping the same/better learning curve. This is done by activly choosing the 
+while keeping the same/better learning curve. This is done by activley choosing the 
 samples for our training set~\cite{ramirez2017active}.
-This means we activly query our input data to get it labeled, therefore getting an output value,
+This means we activley query our input data to get it labeled, therefore getting an output value,
 by a so called oracle. An oracle is just the general term for something that can always label correctly our sample we queried ~\cite{settles2009active}. 
 If we train our ensemble with multiple neural networks, the variance between them can give us an indication about 
-how informative the sample will be. This is called ``uncertainty'' and is modeled via a probabalistic function (Seung et al. 1992):
+how informative the sample will be. This is called ``uncertainty'' and is modeled via a probabalistic function, with a 
+query by Committee algorithm (Seung et al. 1992):
 \[
  a_{QbC}(\psi_i):=\frac{1}{N_tN_xN_c}\sum_{j=1}^{N_t}\sum_{k=1}^{N_x}\frac{1}{N_m}\sum_{m=1}^{N_m}\vert\vert\hat{u}_{i,m}(t_j,x_k)- \overline{\hat{u}_i}(t_j, x_k)\vert\vert^2_2
 \] 
@@ -65,42 +67,37 @@ with $\X$ being the sample size and $\Y$ being the label size.
 P(x,y) is a potential distribution, with $x \in \X$, $y \in \Y$. 
 It represents the joint probability distribution of the sample 
 $x$ and the label $y$. $L^m=\{X,Y\}$ is the training set with m labeled instances. 
-Now the goal is to create a query strategy Q, 
-which queries samples from $U^n$ to be labeled 
-by the oracle: $U^n \xrightarrow{\text{Q}} L^m$. 
-The most common query strategy is 
-to select the instances the model has the least certainty in.
-This approach is called "Uncertainty-based",
-and is simple to implement and most importantly, 
-it frequently improves over random sampling~\cite{zhan2021comparative}. 
-In context of deep active learning, the combination of deep learning 
-and active learning, uncertainty-based methods reaches it limits 
-since single points do not have a statistically significant 
-impact and a full iteration of the deep-learning network is 
-required to train each data point~\cite{sener2017active}. 
+In our case, the input space includes both ICs and PDE parameters for a given PDE, each taking continuous values. 
+As a result, the input space is effectively infinite.
+Our pool is then created by sampling a finite set of IC and PDE parameter pairs.
 
+Now the goal is to create a query strategy Q that queries samples from $U^n$ to be labelled by the oracle: $U^n \xrightarrow{\text{Q}} L^m$. 
+Here we can use the uncertainty as an indicator of the informativeness of the samples to select the samples. 
+This approach is easy to implement and often improves on random sampling. It is the most common approach. ~\cite{zhan2021comparative}. 
+In the context of deep active learning, the combination of deep learning and active learning, 
+uncertainty-based methods reach their limits as single points do not have a statistically 
+significant impact and a full iteration of the deep learning network is required to train each data point~\cite{sener2017active}.
 \subsection{Batch active learning}
 When training a deep-learning network with a pool-based approach, 
 it is inefficient to query single points. 
 In batch active learning, instead of a single point, 
-a whole batch of size $K$ with $K\in\mathcal{N}$  
+a whole batch of size $K$ with $K\in\mathbb{N}$  
 is selected from the given pool~\cite{ren2021survey}. 
 Each time new points are selected, an initial batch of 
 unlabeled data samples 
 $\mathcal{B} = \{x_1,x_2,...,x_b\}\subseteq U$ 
 based on a function $a$ is selected. 
 \subsection{Stochastic batch active learning}
-As in normal uncertainty-based pool-based active learning, 
-an usual acquisition function to select the batch is 
-through the uncertainty of the model with the difference 
-of selecting the $K$ highest points instead of a singular point: 
+If we created a pool we can evaluate the uncertainty for each sample inside. 
+One common method how to generate a batch is to query the $K$ samples with the highest uncertainty. 
 \[
 a_s^{\text{batch}}(\mathcal{I}^{\text{train}};K) := arg\,max_{I\subseteq\mathcal{I}^{\text{pool}},\lvert I\rvert = K}\sum_{i\in I}s(i;\mathcal{I}^{\text{train}})
 \]    
 with $a$ being the acquisition function, 
 $\mathcal{I}^{\text{train}}$ being the indices of the samples 
 in the training data set and $\mathcal{I}^{\text{pool}}$ being the indices 
-of the samples in the pool data set~\cite{kirsch2021stochastic}.\\
+of the samples in the pool data set~\cite{kirsch2021stochastic}.
+
 Since only selecting the Top-$K$ instances can lack diversity, 
 Kirsch et al.~\cite{kirsch2021stochastic} introduce stochastic batch 
 active learning (SBAL). SBAL samples without replacement the input 
@@ -117,16 +114,13 @@ hyperparameter, that is controlling the sharpness of the distribution.
 
 
 \subsection{Query synthesis active learning}
-\todo{orig. paper hinzufügen}
-Query synthesis active learning (QSAL), 
-or membership query synthesis active learning 
-is another approach for active learning. 
-Instead of sampling a large pool of instances 
-like in pool-based active learning, 
-the algorithm can query directly from the input space, 
-or can create new queries. Because we do not need to 
-evaluate the pool over and over again, making the 
-algorithm more efficient. The algorithm is also more versatile, 
-as we don't have to take samples from the pool to which we are bound~\cite{wang2015active}.
+Creating and evaluating the pool can be quite costly, especially if the pool size is set too large. To avoid 
+this problem, another active learning method ``Query synthesis'' was introduced~\cite{Angluin1988}. 
+We query samples to our oracle directly from our input space or create new samples we then query. This comes 
+both with advantages and challenges. QSAL is not being bound to a fixed pool-size, and thereby fixed to a 
+finite amount of samples, allows more versatile sampling. 
+The flexibility is also the key challenge. We have to decide, which 
+samples we want to query~\cite{wang2015active}. 
+In this work, we will use Markov chain Monte Carlo as sampling method.
 
 
