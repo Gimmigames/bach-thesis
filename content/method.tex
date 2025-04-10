@@ -1,33 +1,24 @@
 \chapter{Method}
 \section{Markov chain Monte Carlo}
-Markov chain Monte Carlo (MCMC) is a class of algorithms 
-for posterior sampling~\cite{wang2020brief}. 
-Posterior sampling means sampling from a posterior distribution \[
-\pi(\theta|y)=\frac{\pi(y|\theta)\pi(\theta)}{\pi(y)}
-\]
-with y being the data to be modeled, $\pi(y|\theta)$ 
-being the distribution of $y$ and $\pi(\theta)$ 
-being the density of the prior $\theta$.
-MCMC samples from this distribution by creating a Makrov chain. 
-The Makrov chain is discrete-time and constructed in a way so each sample 
-has the same distribution. To achieve a stationary distribution, 
-it starts with a selected distribution and is run until convergence. 
-The first n states without stationary distributions are called 
-burn-in and all values are discarded. Because the samples are 
-related to each other MCMC is a dependent sampling method.
-One general way of constructing the Markov chain is the 
-Metropolis-Hastings algorithm, which performs a controlled 
-random walk over the parameter space to ensure the Markov
-chain has the posterior distribution as its stationary distribution~\cite{wang2020brief}. 
+If we want to sample directly from the input space, 
+we must somehow determine which samples to sample. In Markov chain Monte Carlo, 
+we start with an initial sample $X_1$. The marginal distribution is called the 
+``initial distribution''~\cite{geyer2011introduction}.
+Each subsequent sample is drawn based on the previous one using a transition probability distribution. Crucially, in a Markov chain, the next state $X_{n+1}$ depends only on the current state $X_n$, rather then on the full history of the chain.
+Since we do not want random samples, we require that the chain convergeing to a target distribution $\pi$.
+To make it more concrete, we have to understand what it means for a distribution to remain unchanged
+as the chain evolves, this leads us to the concept of stationary.
+Stationary means that the conditional distribution for a 
+subset of the chain does not depend on where the subset is taken from.
+We can be sure that a chain is stationary by checking if it is reversible. 
+For a reversible chain, the distribution for $X_{n+1},X_{x+2},\dots,X_{x+k}$ and $X_{n+k},\dots,X_{n+2},X_{n+1}$ are the same.
+Often a burn-in is used, i.e. 
+the first $n$ values of the chain are discarded with the aim of throwing away these samples before the chain converges. 
+According to Geyer ~\cite{geyer2011introduction}, 
+burn-in is unnecessary and starting from a reasonable point is just as effective. 
+Therefore, in this paper, it is omitted in all examples.
+As said previously, we select the next sample based on the transition probabilty distribution, but we have not yet defined how exactly it is defined. In this work we will keep our focus on the Metropolis-Hastings algorithm.
 
-MCMC is not the only possible algorithm for posterior sampling. 
-Another way for posterior sampling is Variational Inference. 
-For example Local Refinement, a method created by 
-Havasi et al.~\cite{havasi2021sampling}. 
-To get close to the posterior, 
-it starts with a mean-field approximation and then refines it 
-locally with inexpensive operatioxns. From that refined region, 
-it is possible to generate samples.
 \subsection{Metropolis-Hastings algorithm}
 The Metropolis-Hastings algorithm is one possible implementation of constructing the Makrov chain in MCMC and 
 is developed by Hastings~\cite{hastings1970}.
@@ -45,18 +36,15 @@ Accept or reject the State with the acceptance probability
         1 & \text{otherwise}
     \end{cases}     
 \]
-If accepted, then set $X_{t+1}=X_{t+1}$, otherwise $X_{t+1}  = X_t$ and restart the process.
+If accepted, then set $X_{t+1}=X_{t+1}$, otherwise $X_{t+1}  = X_t$ and restart the process. 
+Importantly this also means if the sample is rejected, the sample before is twice in the chain.
 
 Metropolis-Hastings is a further developlment of the Metropolis algorithm, which was introduced by Metropolis et al.~\cite{metropolis1953} and required $q$ to be symmetrical.
 
 In Random Walk Metropolis, the proposals are drawn with i.i.d and fixed symmetric densities $Z_i$,
 for example $Z_i\sim N(0,\sigma^2 I_d)$.
 Each new proposal therefore has the form $X_{i+1} = X_i + Z_{i+1}$~\cite{rosenthal2011optimal}.
-\todo{Umschreiben und Quelle wechseln}
 \subsection{Hamiltonian Dynamics}
-\todo{Ausformulieren}
--originated from physics
--important formulas
 \subsection{Hamiltonian Monte Carlo}
 Hamiltonian Monte Carlo is an adaptation of Metropolis-Hastings, which uses 
 Hamiltonian dynamics to sample from a unknown distribution, in bayesian conext the posterior distribution.
@@ -116,11 +104,6 @@ for $i=1,...,d$~\cite{MR2858447}.
     \item constant velocity $v=\frac{p}{m}$
 \end{itemize}   
 \subsection{Metropolis adjusted Langevin algorithm}
- 
-similar to RMW, but proposal increment distribution $Z_i$ is defined as 
-\[
-Z_i \sim N((X_N?)\frac{\sigma^2}{2}\nabla\log\pi(X_n),\sigma^2I_d)
-\]
-optimal acceptance rate $A(l_{opt})=0.574$
+The Metropolis adjusted Langevin algorithm (MALA) was first proposed by 
+Besag~\cite{besagComment} and further evaluated by Roberts and Tweedie~\cite{roberts1996exponential}.
 
-\listoftodos[Todos here]

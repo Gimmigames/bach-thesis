@@ -116,11 +116,12 @@ hyperparameter, that is controlling the sharpness of the distribution.
 \subsection{Query synthesis active learning}
 Creating and evaluating the pool can be quite costly, especially if the pool size is set too large. To avoid 
 this problem, another active learning method ``Query synthesis'' was introduced~\cite{Angluin1988}. 
-We query samples to our oracle directly from our input space or create new samples we then query. This comes 
-both with advantages and challenges. QSAL is not being bound to a fixed pool-size, and thereby fixed to a 
-finite amount of samples, allows more versatile sampling. 
-The flexibility is also the key challenge. We have to decide, which 
-samples we want to query~\cite{wang2015active}. 
-In this work, we will use Markov chain Monte Carlo as sampling method.
+We query samples to our oracle directly from our input space or create new samples we then query~\cite{wang2015active}. 
+Querying directly from the inputspace can be a great advantage for us. 
+Previously the uncertainty was mentioned, and how sampling from higher uncertainties can 
+reduce the amount of training samples. From given uncertainty we can make use of the possibility 
+of calculating the gradient of it. This allowes us to sample from regions with the steepest ascent, 
+even for a global perspective. The challenge here is to choose a fitting algorithm, defining the 
+query strategy, this is where a chose an implementation of Markov chain Monte Carlo.
 
 
