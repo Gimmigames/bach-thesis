@@ -9,7 +9,7 @@ a variation of MCMC. We start with $n$ parallel initial states, consisting of bo
 PDE parameter, and create $n$ new states. This allows the usage of the gradient of the uncertainty
 of the model to sample from the global uncertainty instead of 
 being locally restricted like the Pool-Based approach. 
-We therefore chose as tranistion probability from one state to the next a discretized version
+We therefore chose as tranistion probability from one state to the next a discretised version
 of the langevin diffusion:
 \[
 N(U_{n-1}\frac{h}{2} \nabla \pi(U_{n-1}), hI_d)
