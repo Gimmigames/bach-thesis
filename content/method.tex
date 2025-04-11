@@ -1,34 +1,67 @@
 \chapter{Method}
+\section{Sampling Problem}
+Before we go into more detail about what we are trying to change and implement, we first define the problem scope we are currently in. Our work builds upon and extends the AL4PDE benchmark framework introduced by Musekamp et al. (2025). We first examine the existing AL cycle, which is visualized in Fig.\ref{fig:active-learning-cycle}. 
+
+The active learning process begins with the specification of a target partial differential equation (PDE) from which data is to be sampled. Once the specific PDE has been selected, the corresponding input space is constructed. This input space consists of samples from the domain of PDE parameters and initial conditions (ICs).
+
+To begin the active learning cycle, a small set of random samples is randomly selected from the input space passed as input for the numerical solver, here called ``PDE Solver''. The PDE Solver computes the solution trajectories, which are used to initialize the neural surrogate model.  The starting point is important to estimating the initial uncertainty assosiated with the model's predictions.
+
+The uncertainty for each sample in the pool is quantified using the acquisition function $a_{QbC}$, based on the variance across different predictions across different models.
+\[
+ a_{QbC}(\psi_i):=\frac{1}{N_tN_xN_c}\sum_{j=1}^{N_t}\sum_{k=1}^{N_x}\frac{1}{N_m}\sum_{m=1}^{N_m}\vert\vert\hat{u}_{i,m}(t_j,x_k)- \overline{\hat{u}_i}(t_j, x_k)\vert\vert^2_2
+\] 
+where $\hat{u}_{i,m}$ denotes the prediction of the $m$-th model in the ensemble, and $\overline{\hat{u}_i}$ is the ensemble mean for input sample $\psi_i$ evaluated over all time $t_j$ and space $x_k$.
+Following this, a pool is constructed, based on random combinations of ICs and PDE parameters. Each sample inside the pool is not labeled and the solution is not known, but the uncertainty can be evaluated using the acquisition function from above.
+
+In the next step, a batch of samples is selected from the pool using the SBAL strategy. Each sample inside the pool is assigned a probability of being selected, proportional to its estimated uncertainty raised to the power of the hyperparameter $m$:
+\[
+p_{\text{power}(\psi)}\propto\alpha(\psi)^m
+\]
+where $\alpha(\psi)$ is the uncertainty derived from the acquisition function.
+
+Once the batch is selected, it is removed from the pool and passed to the numerical PDE solver, to retrieve the label. The labeled samples are added to the training set, which is used as input for the neural PDE solver.
+
+The updated model is again evaluated over the remaining pool samples, and the uncertianty is recalculated. The updated uncertainty is used as the new base for the next batch to select.
+
+The query synthesis method we are implementing therefore is located between the input space and the neural PDE solver. Since we are not utilizing a pool in query synthesis methods, it is removed. However we will still use the uncertainty as measure for the sample informativeness. 
+\begin{figure}
+    \caption{Active learning cycle from Musekamp et al~\cite{musekamp2024active}}
+    \includegraphics[width=\textwidth]{../data/active-learning-pipeline.pdf}
+    \label{fig:active-learning-cycle}
+\end{figure}
 \section{Markov chain Monte Carlo}
 If we want to sample directly from the input space, 
-we must somehow determine which samples to sample. In Markov chain Monte Carlo, 
-we start with an initial sample $X_1$. The marginal distribution is called the 
+we must somehow determine which samples to sample.
+In the best case we can query samples from higher uncertainties more often than those with low uncertainty. Here we can exploit the class of algorithms called Markov chain Monte Carlo (MCMC). MCMC creates a chain of states, where each state is dependent on the previous state, and the whole chain is converging to a target distribution $\pi$. Effectivly meanining the difference between the samples created through the chain and samples created by directly sampling from $\pi$ converges to zero.
+
+MCMC starts with an initial sample $X_1$. The marginal distribution is called the 
 ``initial distribution''~\cite{geyer2011introduction}.
-Each subsequent sample is drawn based on the previous one using a transition probability distribution. Crucially, in a Markov chain, the next state $X_{n+1}$ depends only on the current state $X_n$, rather then on the full history of the chain.
-Since we do not want random samples, we require that the chain converging to a target distribution $\pi$.
-To make it more concrete, we have to understand what it means for a distribution to remain unchanged
-as the chain evolves, this leads us to the concept of stationary.
-Stationary means that the conditional distribution for a 
+Each subsequent sample is drawn based on the previous one using a transition probability distribution. Since the amount of samples is deterministic, this creates a discrete time Markov chain. Crucially, in a Markov chain, the next state $X_{n+1}$ depends only on the current state $X_n$, rather then on the full history of the chain.
+
+If we want the chain to converge to $\pi$, we have to understand what it means for a distribution to remain unchanged
+as the chain evolves, which leads us to the concept of stationary.
+Stationary means, that the conditional distribution for a 
 subset of the chain does not depend on where the subset is taken from.
 We can be sure that a chain is stationary by checking if it is reversible. 
 For a reversible chain, the distribution for $X_{n+1},X_{x+2},\dots,X_{x+k}$ and $X_{n+k},\dots,X_{n+2},X_{n+1}$ are the same.
+
 Often a burn-in is used, i.e. 
 the first $n$ values of the chain are discarded with the aim of throwing away these samples before the chain converges. 
 According to Geyer ~\cite{geyer2011introduction}, 
 burn-in is unnecessary and starting from a reasonable point is just as effective. 
 Therefore, in this paper, it is omitted in all examples.
-As said previously, we select the next sample based on the transition probabilty distribution, but we have not yet defined how exactly it is defined. In this work we will keep our focus on the Metropolis-Hastings algorithm.
 
+We still have the problem open on how we want to select the transition probability, and to fill this gap, we will be using a version of the Metropolis-Hastings MCMC.
 \subsection{Metropolis-Hastings algorithm}
 The Metropolis-Hastings algorithm is one possible implementation of constructing the Markov chain in MCMC and 
-is developed by Hastings~\cite{hastings1970}.
+is developed by Hastings~\cite{hastings1970}. The algorithm is a further developlment of the Metropolis algorithm, which was introduced by Metropolis et al.~\cite{metropolis1953}.
 Let $\pi(x)$ be the density we want to take samples from, called the target density.
-Then, the algorithm requires a distribution proportional to the target denisity, $\pi(x)\propto\tilde{\pi}(x)$.
-To determine the next state in the Markov chain, it also requires a proposal kernal $q$.
+Then, the algorithm requires a distribution proportional to the target denisity, $\pi(x)\propto\tilde{\pi}(x)$ and a proposal kernal $q(X_{t+1}|X_t)$.
+The proposal kernal is a probabalistic function, and is proposing a new state $X_{t+1}$ based on the old state $X_t$.
 
-The transition from the Markov state $X_t$ to $X_{t+1}$ is then defined as follows.
-Sample a new State  $X_{t+1}$ from $q(y | X_t)$. 
-Accept or reject the State with the acceptance probability
+The transition from the Markov state $X_t$ to $X_{t+1}$ is then defined as follows:
+Sample a new State  $X_{t+1}$ from $q(X_{t+1} | X_t)$. 
+The acceptence probability is then defined as: 
 \[ 
     \alpha(X_t, X_{t+1}) = 
     \begin{cases}
@@ -36,19 +69,21 @@ Accept or reject the State with the acceptance probability
         1 & \text{otherwise}
     \end{cases}     
 \]
+The proposal is therefore accepted with the probabilty $\alpha(X_t,X_{t+1})$.
 This is known as Metropolis-Hastings step and if accepted, then set $X_{t+1}=X_{t+1}$, otherwise $X_{t+1}  = X_t$ and restart the process. 
 Importantly this also means if the sample is rejected, the sample before is twice in the chain.
 
-Metropolis-Hastings is a further developlment of the Metropolis algorithm, which was introduced by Metropolis et al.~\cite{metropolis1953} and required $q$ to be symmetrical.
+For our implementation, we can draw an initial sample at random, to start the algorithm. For an implementation missing is still the proposal kernal. If our propsal kernal is equal to our target density, the acceptence rate would be one and we would converge in just one step. In the reality this is not possible, hence we have to approach this in a different way.
 
-In Random Walk Metropolis, the proposals are drawn with i.i.d and fixed symmetric densities $Z_i$,
-for example $Z_i\sim N(0,\sigma^2 I_d)$.
-Each new proposal therefore has the form $X_{i+1} = X_i + Z_{i+1}$~\cite{rosenthal2011optimal}.
+The easiest way for a creation of the kernal is to use Random Walk Metropolis (RMW). The proposals are drawn with i.i.d and a fixed symmetric denisity $Z_i$, e.g.  $Z_i\sim N(0,\sigma^2 I_d)$.
+Each new proposal therefore has the form $X_{i+1} = X_i + Z_{i+1}$~\cite{rosenthal2011optimal}. 
 
-\subsection{Metropolis adjusted Langevin algorithm}
-We want to exploit the gradient of uncertainty. Using a simple random walk metropolis would not be sufficient for this purpose and would converge slowly to the target distribution. Therefore, we need a more informed version of the proposal generation method.
+This approach does work, however with a slow convergence rate \todo{CITE!}, but more importantly, it does not utilize informations we have. 
+We have access to the gradient of the uncertainty, and for a faster convergence rate, we want to take advantage of it. Therefore we are searching for a proposal kernal, which also includes gradient informations.
 
-A natural candidate is the Langevin diffusion, defined as:
+\subsection{Metropolis adjusted Langevin algorithm}\label{sec:MALA}
+The Metropolis adjusted Langevin algorithm combines the Langevin diffusion with the Metropolis-Hastings step, hence utilizing gradient information.
+The Langevin diffusion used as proposal is defined as:
 \[
 dL_t=dW_t+\frac{1}{2}\nabla \log{\pi(L_t)}dt
 \]
@@ -60,11 +95,11 @@ Langevin diffuision, and use it as an update for a Markov chain:
 \[
 X_{n+1}=N(X_n+\frac{1}{2}h\nabla\log{\pi(X_n)}, hI_k)
 \]
-$I_k$ is the $k\times k$ identity matrix, and $h$ determines the step size. This is known as the unadjusted Langevin algorithm (ULA)~\cite{PARISI1981378}.
+$I_k$ is the $k\times k$ identity matrix, and $h$ determines the step size. If we stop the algorithm here, and just accept the proposal, we get the unadjusted Langevin algorithm (ULA)~\cite{PARISI1981378}.
 While ULA converges to a stationary distribution, this distribution is not guaranteed to match the target density $\pi$~\cite{roberts1996exponential}.   
 
 If we want to ensure a correct convergence to the correct distribution, corrections must be made.
-The Metropolis adjusted Langevin algorithm (MALA) was first proposed by 
+MALA was first proposed by 
 Besag~\cite{besagComment} and further evaluated by Roberts and Tweedie~\cite{roberts1996exponential}.
 It takes advantage of the Metropolis-Hastings step, while keeping the discretised Langevin diffusion as a proposal.
 The next suggestion is therefore fetched with:
@@ -79,5 +114,4 @@ then compute the acceptence probality:
         1 & \text{otherwise}
     \end{cases}    
 \]
-if $X_{n+1}$ is accepted, we set $X_n=X_{n+1}$, else we set $X_n=X_n$.
-With the Metropolis construction, the Markov chain converges to $\pi$.
+if $X_{n+1}$ is accepted, we set $X_n=X_{n+1}$, else we set $X_n=X_n$. With this correction the Markov chain is ensured to converge to the target distribution $\pi$.
