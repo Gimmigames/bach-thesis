@@ -1,25 +1,24 @@
 \chapter{Introduction}
 In deep learning, a key component is the training set from which our model can learn~\cite{LeCun2015}. 
 It consists of the input data and the associated label. For example, if we want our model to recognise pictures of dogs and cats, the input data would be the pictures, and the associated labels would be the classification as dog or cat.
-Usually, the amount of training data needs to be quite large to keep the deviation between the expected output of our model and the actual output small. 
+Usually, the amount of training data is required to be quite large to keep the deviation between the expected output of our model and the actual output small. 
 However, the process of labelling data is not free. Often the computational cost is many times greater than the cost of generating the input itself~\cite{settles2009active}. 
 A common technique to reduce the number of training samples required while still achieving high accuracy is \textit{active learning}.
 Rather than just randomly labelling each piece of input data and using it as training data, 
 we instead apply an algorithm that selects the samples that give us a 
 high amount of information. 
 This has been applied to various fields, e.\,g.\xspace drug discovery ~\cite{REKER201973} 
-or text categorisation ~\cite{lewis1995sequential}. 
-Neural PDE solvers are particularly affected by the high cost of labelling.
+or text categorisation ~\cite{lewis1995sequential}. The field we are intrested in for this work is active learning for neural PDE solvers.
 
-Typically, the solution to a PDE is approximated using a numerical solver, which is both resource-intensive and time-consuming. 
+The solution to a PDE is typically approximated using a numerical solver, which is both resource-intensive and time-consuming. 
 To reduce the effort, neural PDE solvers have been introduced~\cite{NEURIPS2023_d529b943}, 
 which require a numerical solver for their training data and pass 
 these results on to the neural network. Here we still have 
 the problem of the high cost of labelling by numerical solvers. 
-Therefore, pool-based active learning was introduced 
-by Musekamp et al. ~\cite{musekamp2024active} and applied to different neural surrogate models in the context of PDEs.
+Therefore, pool-based active learning for neural PDE solvers was introduced 
+by Musekamp et al. ~\cite{musekamp2024active} and applied to different neural surrogate models.
 
-Pool-based methods are one of the most common strategies for 
+pool-based methods are one of the most common strategies for 
 active learning because they give good results and are easy to implement.
 However, the creation of a pool from the input space has its drawbacks. 
 In particular, since the pool size is determined by a hyperparameter, 
@@ -32,7 +31,7 @@ Instead, we can sample directly from the input space, known as query synthesis~\
 The main advantage is that we can exploit the gradient of uncertainty by sampling from the largest 
 increase. Unlike pool-based methods, which can become trapped in local optima, query synthesis 
 allows a more global search for informative samples. This is also the main goal of this thesis: 
-to replace the old pool-based method with a query synthesis strategy using the gradient, 
+to replace the old pool-based method with a query synthesis strategy using the uncertainty of the model as measurement for sample information. More specifically, we want to utilize gradient information of the uncertainty, 
 which should be more efficient, reducing the deviation between actual and expected results 
 compared to the pool-based method, while improving the computational speed.
 

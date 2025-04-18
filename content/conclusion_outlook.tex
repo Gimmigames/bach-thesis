@@ -1,27 +1,24 @@
 \chapter{Conclusion and Outlook}\label{chap:zusfas}
-We have created a new way of active learning for an already known benchmark AL4PDE and 
-thereby replaces the old Pool-Based approach. 
-AL4PDE is an benchmark created by Musekamp et al., combining an ensemble for solving PDEs with 
-active learning. To generate training data, a numerical solver is used and the variance between
-the models inside the ensemble for a sample is modeled as a probabalistic function and called
-"uncertainty". In this work, we sampled directly from the input space using 
-a variation of MCMC. We start with $n$ parallel initial states, consisting of both ICs and 
-PDE parameter, and create $n$ new states. This allows the usage of the gradient of the uncertainty
-of the model to sample from the global uncertainty instead of 
-being locally restricted like the Pool-Based approach. 
-We therefore chose as tranistion probability from one state to the next a discretised version
-of the langevin diffusion:
-\[
-N(U_{n-1}\frac{h}{2} \nabla \pi(U_{n-1}), hI_d)
-\] 
-where $\nabla\log\pi(U_{n-1})$ denotes the gradient of the logarithm of the previous state $U_{n-1}$.
-Since we are mainly intrested in querying higher uncertainties we only use the last state 
-of the markov chain as input for our numerical solver.
-Since both the chain length and the pool size are set by a hyperparamter a fair comparision is difficult to
-make
-\todo{fair comparision}
-\todo{Future work}
+The aim of this work was to implement a new active learning (AL) strategy for the existing framework AL4PDE. AL4PDE is an active learning framework in which a PDE, together with the corresponding PDE parameters and initial conditions (ICs), is queried to a numerical solver to generate training data for an ensemble of neural networks. Our proposed method retains the core principle of using model uncertainty - derived from variance across the ensemble - as a measure of sample informativeness.
 
+Previously, the existing AL strategy uses a pool-based sampling strategy, where a large set of samples is derived from the input space and the uncertainty is evaluated. However, this approach requires calculating the uncertainty for each sample in the pool, which is computationally expensive and limits the sampling to the given pool. 
 
+To address this, we proposed a query synthesis approach that samples directly from the input space, eliminating the need for pool creation and allowing for more flexible exploration.
+Crucially, in our case, the gradient of uncertainty is available, allowing the method to steer sampling towards globally more informative regions. 
 
+For query synthesis, we use Markov Chain Monte Carlo (MCMC) methods, where the target distribution is the uncertainty.
+Our initial strategy used the Metropolis-adjusted Langevin algorithm, which combines both a discretised version of Langevin diffusion and a Metropolis-Hastings step. Thus, it satisfies both the convergence to uncertainty and the gradient information. The chain was used as input to generate training data. However, the results showed that repeated evaluation of rejected samples led to inefficient learning, as the ensemble had already learned from these instances, resulting in limited loss reduction.
 
+To mitigate this, we removed the Metropolis-Hastings step and accepted all proposed states unconditionally. While this improved performance over MALA, it was still inferior to the original pool-based method. To further improve efficiency, we introduced a parallelized approach where multiple chains were initialized with independent proposals and only the final state of each chain was used for training. The chain length was controlled by a hyperparameter.
+
+This parallelized strategy produced results comparable to the original method. However, due to the computational cost of maintaining multiple chains - especially for longer chain lengths - our method became slower than pool-based sampling with large pool sizes. We showed that reducing the chain length per sample mitigated this cost, albeit at the cost of increased loss.
+
+Based on the foundation laid in this work, future improvements should include sampling techniques utilizing an adaptation of MCMC while not being dependent on the Metropolis-Hastings acceptance step. One potential way of achieving this with the current implementation is to start MALA on already trained samples. Therefore, by proposing the next step, the probability of acceptance should be higher, since unknown samples typically have a higher uncertainty than samples already trainend on. One further usage could be to not use the chain as input. Instead, use it to create the pool in pool-based methods. This could lead to a pool with samples containing higher uncertainties, makeing future sampling more effective.
+
+More broadly, advanced sampling methods, such as Hamiltonian Monte Carlo (HMC) and Population Monte Carlo (PMC) offer promising directions. 
+
+HMC uses Hamiltonian dynamics to propose transitions in the input space, using both gradients and momentum variables to generate proposals that follow the target distribtution more efficiently. HMC avoids random walk behaviour, allowing faster convergence - particular in high dimensional spaces like the PDE input space. HMC is also the more general form of MALA - or the other way around, MALA is a specific implementation of HMC. However, since HMC still has an acceptance step it could potentially run into the same errors as MALA.
+
+If we want to completly get rid of the Metropolis-Hastings step, PMC would be an alternative. PMC offers a population-based approach where multiple samples are evolved simultaneously, with importance weights guiding resampling and adaptation over iterations. PMC also naturally supports parallelism and could scale well with our existing parallel chain architecture.
+
+In summary, our work presents a viable alternative to pool-based sampling in AL4PDE, offering a gradient-informed and more flexible sampling methods. While still trade-offs in runtime and accuracy remain, our approach lays the groundwork for future improvements in efficient, uncertainty-guided query synthesis for PDE-based learning frameworks.

@@ -1,19 +1,10 @@
 \chapter{Implementation}\label{chap:implementation}
-%\todo{explain how IC parameters are generated/how IC is generated from IC paramers. Same for PDE p}
-The first goal was to implement MALA introduced in chapter \ref{chap:k2}.
-As proposal distribution we used the discretised langevin diffusion: 
-\[
-N(X_{n-1}\frac{h}{2} \nabla \pi(X_{n-1}), hI_k)
-\]
-To explain what exactly $X$ is, we first have to take a look how the uncertainty is created.
-In general we only need the IC and PDE parameter. One difference is in the framework AL4PDE 
-we first fetch the PDE parameters in a normed version, and using that information we calculate 
-the correct PDE parameters. Similarly for the IC, we first only fetch the IC parameters - the 
-phase $\phi$ and the amplitude $A$ - and with that and the PDE parameters then calculate the correct IC.
-From this followes that if we calculate the gradient of the uncertainty, we ultimatly get 
-values for both the IC paramters and the normed PDE paramters. Our proposal thereby has to be created
-by utilising the normed PDE parameters and the IC parameters.
- 
+The first step to a working MALA implementation, is defining the proposal kernal described in Eq.~\ref{eq:langevin-diffusion}. 
+Since we are in the context of a Markov chain, we always have the data underlying from the previous state. 
+Intuitivly, the data would be the PDE parameter and the IC from the previous state, but in the framework AL4PDE a small change is done. Firstly, a normalized PDE Parameter is fetched which then gets further calculated to the corrct PDE parameters. This is similar for the ICs: Firstly, only parameters for the ICs are fetched, and evaluated to the final ICs, with the PDE parameters. The IC parameters are defined through the underlying PDE, e.g. an amplitude or a phase. 
+
+If we use that knownledge for the construction of the Markov chain, instead of directly create a proposal for the ICs and PDE parameters, we rather create a proposal for the IC parameters and the normalized PDE parameters.
+This process is demonstrated in Alg. ~\ref{alg:MALA-proposal}. Where $icp$ represents the parameters for an initial condition, and $pdepn$ for the normalized PDE parameters. The $step\_size$ is the learning rate which we can set via a hyperparameter. $I$ is the identity and we take a sample from the normal distribution using $.sample()$
 \begin{algorithm}
     \caption{MALA proposal generation}
     \label{alg:MALA-proposal}
@@ -26,14 +17,10 @@ by utilising the normed PDE parameters and the IC parameters.
         \EndFunction
     \end{algorithmic}
 \end{algorithm}
-$icp\_proposal$ is the proposal for the initial condition parameters, $pdepn\_proposal$ is the proposal for the
-normed PDE parameters, $I$ is the identity matrix, $.sample()$ 
-samples from the normal distribution.
 
-%mehr auf torch eingehen? Eher in Method?
-To get the values for $icp.grad$ and $pdep.grad$ we utilize the $torch.backward()$ function\footnote{https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html}.
 
-We apply the function directly onto the logratithmic scaled uncertainty, demonstrated in Alg. \ref{alg:unc-calc}:
+To get the values for $icp.grad$ and $pdep.grad$ we have access to the gradient of $icp$ and $pdep$, which was calculated by applying the $.backward()$ function on the uncertainty. Crucially, if a propsal is outside of the definition boundary, it is cropped back to the definition boundary. This could potentially lead to doublicates, however with a small enough step size, this problem can be avoided.
+After we generate a proposal (and for the initial Markov state) we calculate the gradient on the logarithmic uncertainty shown in Alg.~\ref{alg:unc-calc}:
   
 \begin{algorithm}
     \caption{uncertainty calculation}
@@ -48,23 +35,19 @@ We apply the function directly onto the logratithmic scaled uncertainty, demonst
     \end{algorithmic}
 \end{algorithm}
 
-After proposing a new state, a metropolis-hasings step is done evaluating if the proposal
-is accepted or rejected. Since we sample from a normal distribution, we can leave out 
-the proposal function from our acceptence step, effectifly doing a metropolis step. 
-We only require the ratio between the old value for the uncertainty, and the proposed one.
-\todo{CHECK!}
+As soon as a propsal was made, we perform the Metropolis-Hastings step done for MALA. For the calculation we will use the transformation described in Sec.~\ref{sec:MALA}.
 If the ratio is higher than a random number between 0 and 1, we accept.
-By accepting, we save the proposed values for the IC and PDE parameters in the makrov chain, represented by a list, and use the values
-as base for our next iteration. If we reject, the old values are saved in the makrov chain and used
+By accepting, we save the proposed values for the IC and PDE parameters in the Markov chain, represented by a list, and use the values
+as base for our next iteration. If we reject, the old values are saved in the Markov chain and used
 again as base for our next iteration. This comes with the consequence of having samples multiple times
-in the makrov chain. The metropolis can be seen in Alg.~\ref{alg:metropolis}
+in the Markov chain. The metropolis can be seen in Alg.~\ref{alg:metropolis}
 With $unc\_old(IC, \lambda)$ we denote the uncertainty created with the IC and the PDE parameters $\lambda$. 
 \begin{algorithm}
     \caption{Metropolis step }
     \label{alg:metropolis}
     \begin{algorithmic}[1] 
         \Function{accept\_or\_reject}{$unc\_old(IC_0, \lambda_0), unc\_prop(IC_1, \lambda_1), complete\_list$}
-            \State $\alpha = unc\_old(IC_0, \lambda_0)/unc\_prop(IC_1, \lambda_1)$
+            \State $\alpha = unc\_old(IC_0, \lambda_0)/unc\_prop(IC_1, \lambda_1) * q(X_t|X_{t+1})/q(X_{t+1}|X_{t+1}) $
             \If{$random()<=\alpha$}\Comment{$accept$}
             \State $complete\_list.append(IC\_params_1, IC_1, \lambda\_norm_1, \lambda_1)$
             \State \textbf{return }$IC_1, IC\_params_1, \lambda_1, \lambda\_norm_1, unc\_prop$
@@ -75,7 +58,7 @@ With $unc\_old(IC, \lambda)$ we denote the uncertainty created with the IC and t
         \EndFunction
     \end{algorithmic}
 \end{algorithm}
-If we put everything together the whole code is in Alg. ~\ref{alg:MALA}. To start the makrov chain, the first values are drawn at random, from samples that have not been trained on.
+If we put everything together, the whole code is in Alg. ~\ref{alg:MALA}. To start the Markov chain, the first values are drawn at random, from samples that have not been trained on.
  
 \begin{algorithm}
     \caption{MALA}
@@ -97,63 +80,21 @@ If we put everything together the whole code is in Alg. ~\ref{alg:MALA}. To star
     \end{algorithmic}
 \end{algorithm}
 
-At the end we have a makrov chain containing $chain\_size$ samples. We then used the whole chain as input for our numerical solver to generate a solution and thereby 
-used as training set for our neural PDE solver. The Loss function for the MALA algorithm with the step-size of 0.1 is shown at Fig. ~\ref{fig:MALA-loss}. 
-We can see on the x-axis the required amount of samples 
-for our numerical solver to label. The required amount of samples is doubled each iteration, therefore 
-the chain size also has to be doubled, starting with 256 samples.
-On the y-axis we see the root mean square error (RMSE). As we can see the loss function is bearly decreasing,
-and is worse than the random selection of samples.
-The main reason are the parameters that appear multiple times or more than once in the chain. 
-If the numerical solver solves the same PDE with the same ICs and adds them to the training set, 
-our neural network will thereby have multiplicatives in its training set. 
-\begin{figure}
-    \caption{MALA vs. Random}
-    \includegraphics{../data/random_mala.pdf}
-    \label{fig:MALA-loss}
-\end{figure}
+At the end we have a Markov chain containing $chain\_size$ samples. We then used the whole chain as input for our numerical solver to generate a solution and thereby 
+used as training set for our neural PDE solver. 
 
-We solve this by removing the Metropolis-Hastings step, and just accepting every state proposed. This comes with the 
-disadvantage of not converging to the target density $\pi$, but we will still sample from regions with higher uncertainties. 
-By removing the acceptance step we are sampling with the unadjusted langevin algorithm, described in Section~\ref{sec:MALA}.
 
-One key change to the ULA for our experiments we will make is the adding of the stepsize in the mean of the normal distribution.
-This modifies the known ULA formula to:
-\[
-    N(U_{n-1}\frac{h}{2} \nabla \pi(U_{n-1}), hI_d)
-\]
-As you may have noticed, this is the same formula as previously used in MALA. 
 
-Since we use the gradient to sample from higher uncertainties, and repreating this process over and over again, later states in the makrov chain should be more 
-beneficial for us then earlier ones. We can make make use of that by instead of using the complete chain as input, we rather only 
-take later states. To still match the amount of samples we use as input for the numerical solver, we also need more chains. 
-If we only take the last state, the chainsize can be choosen freely, but we require an amount of parallel chains matching the input for the numerical solver.
-The result, compared against a random selection and two SBAL methods, with the pool-size being ten thousand and one million are shown in Fig. \ref{fig: ULA-parallel}
-\begin{figure}
-    \caption{Unadjusted langevin alg. parallel}
-    \includegraphics{../data/ULA_parallel.pdf}
-    \label{fig: ULA-parallel}
-\end{figure}
-Again we can see the loss on the y-axis and the numbers of samples on the x-axis. 
-As we can see, even with parallel chains we are currently as good as the current implementations, but not better. 
-If we look at the selection time in Fig.\ref{fig:ULA-parallel-time}, we can see that the doubling of the samples goes hand in hand with a doubling of the selection time, which is given in seconds on the y-axis. This is due to the doublication of the amount of initial samples we use for the chain creation.
-\begin{figure}
-    \caption{ULA Parallel selection time}
-    \includegraphics{../data/ULA_parallel_time.pdf}
-    \label{fig:ULA-parallel-time}
-\end{figure}
-We can reduce the chain size per sample to decrease our selection cost. This is illustrated in Fig. \ref{fig:selection-time}
-\begin{figure}
-    \caption{Selection time comparision}
-    \includegraphics{../data/selection_time.pdf}
-    \label{fig:selection-time}
-\end{figure}
-For all chain sizes we use the same ULA algorithm with the same number of parallel samples. The only difference is the number of times ULA is applied to generate the next sample. We can see quite clearly that if we halve our chain size, the selection time is also halved. 
-However, there is a downside. As the number of steps the algorithm does towards the gradient is reduced, the number of samples with higher uncertainties is also reduced.
-This is visualized in Fig.\ref{fig:loss-comparision}. 
-\begin{figure}
-    \caption{Loss reduction with different chain sizes}
-    \includegraphics{../data/chain-size-comp.pdf}
-    \label{fig:loss-comparision}
-\end{figure}
-With respect to the limited amount of simulations done, we can see that the longer the chain, the better the reduction of the loss.   
+
+
+
+
+
+
+
+
+
+
+
+
+

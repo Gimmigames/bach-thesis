@@ -3,6 +3,80 @@ All experiments are based on the AL4PDE framework. We sample from the combined e
 \[
 \partial_tu+\partial_x(\alpha u^2-\beta\partial_xu+\gamma\partial_{xx}u)=0
 \]
-with periodic boundary conditions and a slightly different IC generator that removes random frequency bins. This is required
+with periodic boundary conditions and a slightly different IC generator that removes random frequency bins. This is required 
 to allow us to get a continuues function for the gradient calculation. As PDE Parameters for the 
 input space we have $\alpha\beta\gamma$. 
+The experiments were conducted using an ensemble of two U-Nets. 
+The query synthesis method is compared against random sampling, which queries random samples from the input space, and the old pool-based approach, with different pool sizes. 
+
+The Loss function for the MALA algorithm with the step-size of 0.1 is shown at Fig. ~\ref{fig:MALA-loss}. 
+We can see on the x-axis the required amount of samples 
+for our numerical solver to label. The required amount of samples is doubled each active learning iteration, therefore 
+the chain size also has to be doubled, starting with 256 samples.
+On the y-axis we see the root mean square error (RMSE). 
+Since we compare the loss to a random sampling, we can conclude MALA is decreasing the loss slower than just random sampling. In this case, since even random sampling yields better results, there is no need to further compare it to the currently existing AL strategies.
+The main reason for the bearly decreasing loss are parameters that appear multiple times or more than once in the chain. 
+If the numerical solver solves the same PDE with the same ICs and adds them to the training set, 
+our neural network will thereby be trained with the same parameters - and the neural network ``learns'' nothing new.
+\begin{figure}
+    \caption{MALA vs. Random}
+    \includegraphics{../data/random_mala.pdf}
+    \label{fig:MALA-loss}
+\end{figure}
+
+We solve this by removing the Metropolis-Hastings step, and just accepting every state proposed. This comes with the 
+disadvantage of not converging to the target density $\pi$, but we will still sample from regions with higher uncertainties. 
+By removing the acceptance step we are sampling with the unadjusted Langevin algorithm, described in Section~\ref{sec:MALA}.
+Since we use the gradient to sample from higher uncertainties, and repreating this process over and over again, later states in the Markov chain should be more beneficial for us then earlier ones. We can make make use of that by instead of using the complete chain as input, we rather only take later states.
+
+To still match the amount of samples we use as input for the numerical solver, we also need more chains. 
+If we only take the last state, the chainsize can be choosen freely - for the experiments we set it to 1024 - but we require an amount of parallel chains matching the input for the numerical solver.
+The result, compared against a random selection and two SBAL methods, with the pool-size being ten thousand and one million are shown in Fig. \ref{fig: ULA-parallel}
+\begin{figure}
+    \caption{Unadjusted langevin alg. parallel}
+    \includegraphics{../data/ULA_parallel.pdf}
+    \label{fig: ULA-parallel}
+\end{figure}
+Again we can see the loss on the y-axis and the numbers of samples on the x-axis. 
+As we can see, even with parallel chains we are currently as good as the current implementations, but not better. 
+If we look at the selection time in Fig.\ref{fig:ULA-parallel-time}, we can see that the doubling of the samples goes hand in hand with a doubling of the selection time, which is given in seconds on the y-axis. This is due to the doublication of the amount of initial samples we use for the chain creation.
+\begin{figure}
+    \caption{ULA Parallel selection time}
+    \includegraphics{../data/ULA_parallel_time.pdf}
+    \label{fig:ULA-parallel-time}
+\end{figure}
+We can reduce the chain size per sample to decrease our selection cost. This is illustrated in Fig. \ref{fig:selection-time}
+\begin{figure}
+    \caption{Selection time comparision}
+    \includegraphics{../data/selection_time.pdf}
+    \label{fig:selection-time}
+\end{figure}
+For all chain sizes we use the same ULA algorithm with the same number of parallel samples. The only difference is the number of times ULA is applied to generate the next sample. We can see quite clearly that if we halve our chain size, the selection time is also halved. 
+However, there is a downside. As the number of steps the algorithm does towards the gradient is reduced, the number of samples with higher uncertainties is also reduced.
+This is visualized in Fig.\ref{fig:loss-comparision}. 
+\begin{figure}
+    \caption{Loss reduction with different chain sizes}
+    \includegraphics{../data/chain-size-comp.pdf}
+    \label{fig:loss-comparision}
+\end{figure}
+With respect to the limited amount of simulations done, we can see that the longer the chain, the better the reduction of the loss.   
+
+To have a clearer understanding on how the parameters are changed, we can have a look at the changing rates from an example chain. In Fig.~\ref{fig:pde-parameter} we can see on the x-axis the 1024 states from the Markov chain, with the values on the y-axis. Through the small changes per sample, the dependency of the previous state is vividly illustrated.
+\begin{figure}
+    \caption{Changes in the PDE parameters per state}
+    \includegraphics[width=\textwidth]{../data/pde_params.png}
+    \label{fig:pde-parameter}
+\end{figure}
+
+The initial conditions are split between the amplitude and the phase. To have a visually appealing graph, they are displayd seperatly. The amplitdude is displayed in Fig.~\ref{fig:IC-amp} and the phase in Fig.~\ref{fig:IC-phi}. 
+As we can see if the proposals are propsing new states further than the boundary, they are cropped back to the edges of the boundary conditions.
+\begin{figure}
+    \caption{Changes in the amplitude for the IC per state}
+    \includegraphics[width=\textwidth]{../data/amp.png}
+    \label{fig:IC-amp}
+\end{figure}
+\begin{figure}
+    \caption{Changes in the phase for the IC per state}
+    \includegraphics[width=\textwidth]{../data/phi.png}
+    \label{fig:IC-phi}
+\end{figure}

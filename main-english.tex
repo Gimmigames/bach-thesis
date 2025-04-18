@@ -31,12 +31,12 @@
   title={Stochastic Query Synthesis for Neural PDE Solvers},
   author={Finn Ullrich},
   type=bachelor,
-  institute=iaas, % or other institute names - or just a plain string using {Demo\\Demo...}
+  institute={Institute for Artificial Intelligence}, % or other institute names - or just a plain string using {Demo\\Demo...}
   course={Informatik},
   examiner={Prof.\ Dr.\ Mathias Niepert},
   supervisor={Daniel Musekamp,\ M.Sc.},
   startdate={October 28, 2025},
-  enddate={April 28, 2019}
+  enddate={April 28, 2025}
 ]{scientific-thesis-cover}
 
 \input{acronyms}
@@ -84,19 +84,23 @@ PDEs are highly influential in physics and are describing various phenomena
 in the world, from wave movement to electro-magnetics. The problem arises
 when one tries to solve them, which requires enormous computing power for a
 numerical solution. Therefore, Musekamp et al. created a benchmark, which
-investigates active learning to get an approximation of the solution. In this
-work, we optimize the currently used pool-based sampling method by replacing
-it with stochastic query synthesis sampling. Instead of sampling from the pool
-set we will use the unadjusted Langevin algorithm to create Makrov chains
-which we then can sample from. We will show that this approaches enriches the
-diversity
+investigates active learning for neural PDE solvers. Neural PDE solvers require trainings data from 
+a numerical solver, active learning can help minimize the amount. In this
+work, we will demonstrate a new strategy of selecting samples called
+stochastic query synthesis. Following this, we will remove the pool currently used and rather 
+create a Markov chain directly from the input space containing unlabeled instances.
+The transition probability is based on the unadjusted Langevin algorithm, allowing 
+us to sample by exploiting gradient information. To retrieve a better result, instead of 
+just one chain, we will create multiple parallel chains, and only take the last state as input. 
+We will show that this approach is equally effective as the currently implemented pool-based 
+implementation. However, there are still performance problems that need to be solved in the future, 
+to make it viable in practice.
 
 \cleardoublepage
 
 %Solely for German courses of study
 \section*{Kurzfassung}
 
-<Kurzfassung der Arbeit>
 
 \cleardoublepage
 
@@ -221,11 +225,11 @@ diversity
 
 \input{content/method}
 
+\input{content/implementation}
+
 \input{content/relatedWork}
 
 \input{content/experiments}
-
-\input{content/implementation}
 
 \input{content/conclusion_outlook}
 
