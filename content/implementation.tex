@@ -4,7 +4,7 @@ Since we are in the context of a Markov chain, we always have the data underlyin
 Intuitivly, the data would be the PDE parameter and the IC from the previous state, but in the framework AL4PDE a small change is done. Firstly, a normalized PDE Parameter is fetched which then gets further calculated to the corrct PDE parameters. This is similar for the ICs: Firstly, only parameters for the ICs are fetched, and evaluated to the final ICs, with the PDE parameters. The IC parameters are defined through the underlying PDE, e.g. an amplitude or a phase. 
 
 If we use that knownledge for the construction of the Markov chain, instead of directly create a proposal for the ICs and PDE parameters, we rather create a proposal for the IC parameters and the normalized PDE parameters.
-This process is demonstrated in Alg. ~\ref{alg:MALA-proposal}. Where $icp$ represents the parameters for an initial condition, and $pdepn$ for the normalized PDE parameters. The $step\_size$ is the learning rate which we can set via a hyperparameter. $I$ is the identity and we take a sample from the normal distribution using $.sample()$
+This process is demonstrated in Alg. ~\ref{alg:MALA-proposal}. Where $icp$ represents the parameters for an initial condition, and $pdepn$ for the normalized PDE parameters. The $step\_size$ is the learning rate which we can set via a hyperparameter. $I$ is the identity and we take a sample from the normal distribution using $.sample()$.
 \begin{algorithm}
     \caption{MALA proposal generation}
     \label{alg:MALA-proposal}
@@ -19,18 +19,17 @@ This process is demonstrated in Alg. ~\ref{alg:MALA-proposal}. Where $icp$ repre
 \end{algorithm}
 
 
-To get the values for $icp.grad$ and $pdep.grad$ we have access to the gradient of $icp$ and $pdep$, which was calculated by applying the $.backward()$ function on the uncertainty. Crucially, if a propsal is outside of the definition boundary, it is cropped back to the definition boundary. This could potentially lead to doublicates, however with a small enough step size, this problem can be avoided.
+To get the values for $icp.grad$ and $pdep.grad$ we have access to the gradient of $icp$ and $pdep$, which was calculated by applying the $.backward()$ function on the uncertainty. Crucially, if a propsal is outside of the definition boundary, it is cropped back to the definition boundary. This could potentially lead to duplicates, however with a small enough step size, this problem can be avoided.
 After we generate a proposal (and for the initial Markov state) we calculate the gradient on the logarithmic uncertainty shown in Alg.~\ref{alg:unc-calc}:
   
 \begin{algorithm}
-    \caption{uncertainty calculation}
+    \caption{uncertainty gradient evaluation}
     \label{alg:unc-calc}
     \begin{algorithmic}[1] 
         \Function{uncertainty\_calculation}{$ic, pdep$}
             \State $unc = model\_uncertainty(ic, pdep)$
             \State $log\_unc = log(unc)$
             \State $log\_unc.backward()$
-            \State \textbf{retrun} $unc$
         \EndFunction
     \end{algorithmic}
 \end{algorithm}
@@ -43,7 +42,7 @@ again as base for our next iteration. This comes with the consequence of having 
 in the Markov chain. The metropolis can be seen in Alg.~\ref{alg:metropolis}
 With $unc\_old(IC, \lambda)$ we denote the uncertainty created with the IC and the PDE parameters $\lambda$. 
 \begin{algorithm}
-    \caption{Metropolis step }
+    \caption{Metropolis-Hastings step}
     \label{alg:metropolis}
     \begin{algorithmic}[1] 
         \Function{accept\_or\_reject}{$unc\_old(IC_0, \lambda_0), unc\_prop(IC_1, \lambda_1), complete\_list$}
@@ -61,7 +60,7 @@ With $unc\_old(IC, \lambda)$ we denote the uncertainty created with the IC and t
 If we put everything together, the whole code is in Alg. ~\ref{alg:MALA}. To start the Markov chain, the first values are drawn at random, from samples that have not been trained on.
  
 \begin{algorithm}
-    \caption{MALA}
+    \caption{Pseurdocode for MALA}
     \label{alg:MALA}
     \begin{algorithmic}[1] 
         \Function{MALA}{$chain\_size, step\_size$}
@@ -72,7 +71,7 @@ If we put everything together, the whole code is in Alg. ~\ref{alg:MALA}. To sta
             \State $icp\_prop, pdepn\_prop = generate\_proposal(icp, pn, step\_size)$
             \State $pdep\_prop = get\_pde\_params(pdepn\_prop)$
             \State $ic\_prop = get\_ic(icp\_prop, pdep\_prop)$
-            \State $unc\_prop = uncertainty\_clarification(ic\_prop, pdep\_prop)$
+            \State $unc\_prop = evaluate\_uncertaint(ic\_prop, pdep\_prop)$
             \State $ic, icp, p, pn, unc\_cur = accept\_or\_reject(unc\_cur, unc\_prop, complete\_list)$
             \EndFor
         \State \textbf{return } $complete\_list$
@@ -83,10 +82,53 @@ If we put everything together, the whole code is in Alg. ~\ref{alg:MALA}. To sta
 At the end we have a Markov chain containing $chain\_size$ samples. We then used the whole chain as input for our numerical solver to generate a solution and thereby 
 used as training set for our neural PDE solver. 
 
+For the implementation of SC-ULA, instead of the Metropolis-Hastings step, it rather just updates all parameters accordingly. The created chain then is further processed by the numerical solver.
+\begin{algorithm}
+    \caption{Pseudocode for SC-ULA}
+    \label{alg:SC-ULA}
+    \begin{algorithmic}[1] 
+        \Function{SC-ULA}{$chain\_size, step\_size$}
+            \State $complete\_list = []$
+            \State $ic, icp, p, pn = initialize\_first\_values()$
+            \State $unc\_cur = uncertainty\_calculation(ic, p)$
+            \For{$i$ in range($chain\_size$)}
+            \State $complete\_list.append(ic, icp, p, pn)$
+            \State $icp\_prop, pdepn\_prop = generate\_proposal(icp, pn, step\_size)$
+            \State $pdep\_prop = get\_pde\_params(pdepn\_prop)$
+            \State $ic\_prop = get\_ic(icp\_prop, pdep\_prop)$
+            \State $unc\_prop = evaluate\_uncertainty(ic\_prop, pdep\_prop)$
+            \State $ic, icp, p, pn, unc\_cur = ic\_prop, icp\_prop, pdep\_prop,  pdepn\_prop, unc\_prop$
+            \EndFor
+        \State \textbf{return } $complete\_list$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
 
+To modify SC-ULA for use in PC-ULA, we can use SC-ULA as a base. Instead of initializing a single tuple of values, we create $n$ tuples in parallel. Since we're using PyTorch, parallel computation is supported by default, so the core code remains largely unchanged-only the dimensionality of the tensors increases.
 
+The algorithm begins by sampling the first $n$ values, which serve as the starting points for the chains. It then calculates the uncertainty for each of these $n$ values and generates the corresponding proposal states in parallel. At the end of the process, the algorithm discards the first $n - 1$ states, retaining only the final one.
 
-
+\begin{algorithm}
+    \caption{Pseudocode for PC-ULA}
+    \label{alg:PC-ULA}
+    \begin{algorithmic}[1] 
+        \Function{SC-ULA}{$chain\_size, step\_size, n$}
+            \State $complete\_list = []$
+            \State $ic, icp, p, pn = initialize\_n\_first\_values(n)$
+            \State $unc\_cur = uncertainty\_calculation(ic, p)$
+            \For{$i$ in range($chain\_size$)}
+            \State $complete\_list.append(ic, icp, p, pn)$
+            \State $icp\_prop, pdepn\_prop = generate\_proposal(icp, pn, step\_size)$
+            \State $pdep\_prop = get\_pde\_params(pdepn\_prop)$
+            \State $ic\_prop = get\_ic(icp\_prop, pdep\_prop)$
+            \State $unc\_prop = evaluate\_uncertainty(ic\_prop, pdep\_prop)$
+            \State $ic, icp, p, pn, unc\_cur = ic\_prop, icp\_prop, pdep\_prop,  pdepn\_prop, unc\_prop$
+            \EndFor
+        \State $complete\_list = complete\_list(-n:)$\Comment Take the last $n$-values
+        \State \textbf{return } $complete\_list$
+        \EndFunction
+    \end{algorithmic}
+\end{algorithm}
 
 
 

@@ -1,15 +1,17 @@
 \chapter{Experiments}
-All experiments are based on the AL4PDE framework. We sample from the combined equation:
-\[
-\partial_tu+\partial_x(\alpha u^2-\beta\partial_xu+\gamma\partial_{xx}u)=0
-\]
-with periodic boundary conditions and a slightly different IC generator that removes random frequency bins. This is required 
-to allow us to get a continuues function for the gradient calculation. As PDE Parameters for the 
-input space we have $\alpha\beta\gamma$. 
+All experiments are based on the AL4PDE framework.
+For this work, we sample from the Combined Equation (CE), proposed by Brandstetter et al. (2021):
+\begin{align}
+    [\partial_t u+\partial_x (\alpha u^2-\beta\partial_x u+\gamma\partial_{xx}u)]=\delta(t,x),\\ u(0,x)=\delta(0,x),\hspace{2cm}\delta(t,x)=\sum_{j=1}^J A_j \sin(\omega_jt+2\pi l_jx/L+\phi_j) \end{align}
+It is called combined because the PDE parameters give rise to different equations. 
+If we summarise the parameters as $\theta_{PDE}=(\alpha,\beta,\gamma)$, we have $\theta_{PDE}=(0,\eta,0)$, which is the heat equation.
+Or, with $\theta_{PDE}=(0.5,\eta,0)$ we get the Burgers equation~\cite{burgers}, which is used for fluid simulations.
+The boundary condition is periodic, and we have a slightly different IC generator that removes random frequency bins. This is required 
+to allow us to get a continuous function for the gradient calculation. As PDE Parameters for the 
+input space we have $\alpha$, $\beta$ and $\gamma$.    
 The experiments were conducted using an ensemble of two U-Nets. 
 The query synthesis method is compared against random sampling, which queries random samples from the input space, and the old pool-based approach, with different pool sizes. 
-
-The Loss function for the MALA algorithm with the step-size of 0.1 is shown at Fig. ~\ref{fig:MALA-loss}. 
+The error for the MALA algorithm with the step-size of 0.1 is shown at Fig. ~\ref{fig:MALA-loss}. 
 We can see on the x-axis the required amount of samples 
 for our numerical solver to label. The required amount of samples is doubled each active learning iteration, therefore 
 the chain size also has to be doubled, starting with 256 samples.
@@ -19,36 +21,40 @@ The main reason for the bearly decreasing loss are parameters that appear multip
 If the numerical solver solves the same PDE with the same ICs and adds them to the training set, 
 our neural network will thereby be trained with the same parameters - and the neural network ``learns'' nothing new.
 \begin{figure}
-    \caption{MALA vs. Random}
+    \caption{Error function from MALA and Random selection.}
     \includegraphics{../data/random_mala.pdf}
+    \centering
     \label{fig:MALA-loss}
 \end{figure}
 
 We solve this by removing the Metropolis-Hastings step, and just accepting every state proposed. This comes with the 
 disadvantage of not converging to the target density $\pi$, but we will still sample from regions with higher uncertainties. 
 By removing the acceptance step we are sampling with the unadjusted Langevin algorithm, described in Section~\ref{sec:MALA}.
-Since we use the gradient to sample from higher uncertainties, and repreating this process over and over again, later states in the Markov chain should be more beneficial for us then earlier ones. We can make make use of that by instead of using the complete chain as input, we rather only take later states.
+Since we use the gradient to sample from higher uncertainties, and repeating this process over and over again, later states in the Markov chain should be more beneficial for us then earlier ones. We can make use of that by instead of using the complete chain as input, we rather only take later states.
 
 To still match the amount of samples we use as input for the numerical solver, we also need more chains. 
 If we only take the last state, the chainsize can be choosen freely - for the experiments we set it to 1024 - but we require an amount of parallel chains matching the input for the numerical solver.
 The result, compared against a random selection and two SBAL methods, with the pool-size being ten thousand and one million are shown in Fig. \ref{fig: ULA-parallel}
 \begin{figure}
-    \caption{Unadjusted langevin alg. parallel}
+    \caption{Unadjusted Langevin alg. with parallel chains}
     \includegraphics{../data/ULA_parallel.pdf}
+    \centering
     \label{fig: ULA-parallel}
 \end{figure}
 Again we can see the loss on the y-axis and the numbers of samples on the x-axis. 
 As we can see, even with parallel chains we are currently as good as the current implementations, but not better. 
-If we look at the selection time in Fig.\ref{fig:ULA-parallel-time}, we can see that the doubling of the samples goes hand in hand with a doubling of the selection time, which is given in seconds on the y-axis. This is due to the doublication of the amount of initial samples we use for the chain creation.
+If we look at the selection time in Fig.\ref{fig:ULA-parallel-time}, we can see that the doubling of the samples goes hand in hand with a doubling of the selection time, which is given in seconds on the y-axis. This is due to the duplication of the amount of initial samples we use for the chain creation.
 \begin{figure}
     \caption{ULA Parallel selection time}
     \includegraphics{../data/ULA_parallel_time.pdf}
+    \centering
     \label{fig:ULA-parallel-time}
 \end{figure}
 We can reduce the chain size per sample to decrease our selection cost. This is illustrated in Fig. \ref{fig:selection-time}
 \begin{figure}
     \caption{Selection time comparision}
     \includegraphics{../data/selection_time.pdf}
+    \centering
     \label{fig:selection-time}
 \end{figure}
 For all chain sizes we use the same ULA algorithm with the same number of parallel samples. The only difference is the number of times ULA is applied to generate the next sample. We can see quite clearly that if we halve our chain size, the selection time is also halved. 
@@ -57,6 +63,7 @@ This is visualized in Fig.\ref{fig:loss-comparision}.
 \begin{figure}
     \caption{Loss reduction with different chain sizes}
     \includegraphics{../data/chain-size-comp.pdf}
+    \centering
     \label{fig:loss-comparision}
 \end{figure}
 With respect to the limited amount of simulations done, we can see that the longer the chain, the better the reduction of the loss.   
@@ -65,6 +72,7 @@ To have a clearer understanding on how the parameters are changed, we can have a
 \begin{figure}
     \caption{Changes in the PDE parameters per state}
     \includegraphics[width=\textwidth]{../data/pde_params.png}
+    \centering
     \label{fig:pde-parameter}
 \end{figure}
 
@@ -73,10 +81,12 @@ As we can see if the proposals are propsing new states further than the boundary
 \begin{figure}
     \caption{Changes in the amplitude for the IC per state}
     \includegraphics[width=\textwidth]{../data/amp.png}
+    \centering
     \label{fig:IC-amp}
 \end{figure}
 \begin{figure}
     \caption{Changes in the phase for the IC per state}
     \includegraphics[width=\textwidth]{../data/phi.png}
+     \centering
     \label{fig:IC-phi}
 \end{figure}

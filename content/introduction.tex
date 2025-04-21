@@ -18,7 +18,7 @@ the problem of the high cost of labelling by numerical solvers.
 Therefore, pool-based active learning for neural PDE solvers was introduced 
 by Musekamp et al. ~\cite{musekamp2024active} and applied to different neural surrogate models.
 
-pool-based methods are one of the most common strategies for 
+Pool-based methods are one of the most common strategies for 
 active learning because they give good results and are easy to implement.
 However, the creation of a pool from the input space has its drawbacks. 
 In particular, since the pool size is determined by a hyperparameter, 
@@ -31,12 +31,14 @@ Instead, we can sample directly from the input space, known as query synthesis~\
 The main advantage is that we can exploit the gradient of uncertainty by sampling from the largest 
 increase. Unlike pool-based methods, which can become trapped in local optima, query synthesis 
 allows a more global search for informative samples. This is also the main goal of this thesis: 
-to replace the old pool-based method with a query synthesis strategy using the uncertainty of the model as measurement for sample information. More specifically, we want to utilize gradient information of the uncertainty, 
-which should be more efficient, reducing the deviation between actual and expected results 
+to replace the old pool-based method with a query synthesis strategy using the uncertainty of the model as measurement for sample information. More specifically, we want to utilize gradient information of the uncertainty. 
+The gradient information allows us to either sample from the complete underlying distribution, or even sample more often from samples with higher uncertainty.
+This should be reducing the deviation between actual and expected results 
 compared to the pool-based method, while improving the computational speed.
 
 We begin with a brief introduction to the various fundamentals necessary to understand the 
 current implementation. 
 Next, we describe the methodology, followed by an explanation of the experiments and their implementation. 
+Also we will have a comparision to similar already existing work.
 We then discuss the results. Finally, we conclude with a summary of our findings and discuss 
 possible directions for future research.
