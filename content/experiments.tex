@@ -11,12 +11,13 @@ to allow us to get a continuous function for the gradient calculation. As PDE Pa
 input space we have $\alpha$, $\beta$ and $\gamma$.    
 The experiments were conducted using an ensemble of two U-Nets. 
 The query synthesis method is compared against random sampling, which queries random samples from the input space, and the old pool-based approach, with different pool sizes. 
-The error for the MALA algorithm with the step-size of 0.1 is shown at Fig. ~\ref{fig:MALA-loss}. 
+\subsection{Metropolis adjusted Langevin algorithm}
+The error for the MALA algorithm with different step sizes is shown at Fig. ~\ref{fig:MALA-loss}. 
 We can see on the x-axis the required amount of samples 
 for our numerical solver to label. The required amount of samples is doubled each active learning iteration, therefore 
 the chain size also has to be doubled, starting with 256 samples.
 On the y-axis we see the root mean square error (RMSE). 
-Since we compare the loss to a random sampling, we can conclude MALA is decreasing the loss slower than just random sampling. In this case, since even random sampling yields better results, there is no need to further compare it to the currently existing AL strategies.
+Since we compare the loss to a random sampling, we can conclude MALA, is decreasing the loss slower than just random sampling. In this case, since even random sampling yields better results, there is no need to further compare it to the currently existing AL strategies.
 The main reason for the bearly decreasing loss are parameters that appear multiple times or more than once in the chain. 
 If the numerical solver solves the same PDE with the same ICs and adds them to the training set, 
 our neural network will thereby be trained with the same parameters - and the neural network ``learns'' nothing new.
@@ -27,16 +28,26 @@ our neural network will thereby be trained with the same parameters - and the ne
     \label{fig:MALA-loss}
 \end{figure}
 
+\subsection{SC-ULA}
 We solve this by removing the Metropolis-Hastings step, and just accepting every state proposed. This comes with the 
 disadvantage of not converging to the target density $\pi$, but we will still sample from regions with higher uncertainties. 
-By removing the acceptance step we are sampling with the unadjusted Langevin algorithm, described in Section~\ref{sec:MALA}.
-Since we use the gradient to sample from higher uncertainties, and repeating this process over and over again, later states in the Markov chain should be more beneficial for us then earlier ones. We can make use of that by instead of using the complete chain as input, we rather only take later states.
+By removing the acceptance step we are sampling with the unadjusted Langevin algorithm, described in Section~\ref{sec:ULA}.
+The error function, with the loss on the y-axis and the amount of samples on the x-axis, is displayed in Fig.~\ref{fig:SC-ULA-loss}. 
+As we can see, the loss is steadily decreasing in contrast to the previous MALA implementation. Hoever, SC-ULA is still only comparable to a uniformly random selection. 
+\begin{figure}
+    \caption{Error function from SC-ULA and Random selection.}
+    \includegraphics{../data/SC-ULA.pdf}
+    \centering
+    \label{fig:SC-ULA-loss}
+\end{figure}
+\subsection{PC-ULA}
+Since we use the gradient to sample from higher uncertainties, and repeating this process over and over again, later states in the Markov chain should be more beneficial for us then earlier ones. We can make use of that by instead of using the complete chain as input, we rather only take later states. This corresponds to PC-ULA, described in Section~\ref{sec:ULA}.
 
 To still match the amount of samples we use as input for the numerical solver, we also need more chains. 
 If we only take the last state, the chainsize can be choosen freely - for the experiments we set it to 1024 - but we require an amount of parallel chains matching the input for the numerical solver.
-The result, compared against a random selection and two SBAL methods, with the pool-size being ten thousand and one million are shown in Fig. \ref{fig: ULA-parallel}
+The error function of PC-ULA, compared against a random selection and two SBAL methods, with the pool-size being ten thousand and one million are shown in Fig. \ref{fig: ULA-parallel}
 \begin{figure}
-    \caption{Unadjusted Langevin alg. with parallel chains}
+    \caption{Error function PC-ULA in comparision to existing methods}
     \includegraphics{../data/ULA_parallel.pdf}
     \centering
     \label{fig: ULA-parallel}

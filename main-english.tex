@@ -84,8 +84,8 @@ PDEs are highly influential in physics and are describing various phenomena
 in the world, from wave movement to electro-magnetics. The problem arises
 when one tries to solve them, which requires enormous computing power for a
 numerical solution. Therefore, Musekamp et al. created a benchmark, which
-investigates active learning for neural PDE solvers. Neural PDE solvers require trainings data from 
-a numerical solver, active learning can help minimize the amount. In this
+investigates active learning for neural PDE solvers. 
+However, neural PDE solvers require training data from an computationally expensive numerical solver. Active learning can reduce the amount of data - called labels -  required, while keeping the same performance. In this
 work, we will demonstrate a new strategy of selecting samples called
 stochastic query synthesis. Following this, we will remove the pool currently used and rather 
 create a Markov chain directly from the input space containing unlabeled instances.

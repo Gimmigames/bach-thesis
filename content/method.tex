@@ -30,9 +30,8 @@ The query synthesis method we are implementing therefore is located between the 
 \section{Target sampling distribution}
 
 We now take a closer look at the target distributions we aim to sample from. In the case of pool-based active learning with uncertainty as the target, we sample from an underlying distribution based on the evaluated uncertainty of all points in the pool. If we query a batch using SBAL, for example:
-\todo{schau Slack anmerkung}
 \[
-p_{\text{power}(\psi)}\propto\alpha(\psi)^m\cdot 
+p_{\text{power}(\psi)}\propto\alpha(\psi)^m\cdot p_{pool}(\psi)
 \]
 $\psi$ is determined based on the points in the pool.
 
@@ -62,7 +61,7 @@ Therefore, in this paper, it is omitted in all examples.
 
 We still have the problem open on how we want to select the transition probability.
 
-\section{Undajusted Langevin algorithm}
+\section{Undajusted Langevin algorithm}\label{sec:ULA}
 As a natural candiate for hte transition probability is Langevin diffusion. The Langevin diffusion is defined as:
 \[
     dL_t=dW_t+\frac{1}{2}\nabla \log{\pi(L_t)}dt
@@ -145,7 +144,3 @@ If we still want to calculate $\alpha$ correctly, we will look at the logarithm 
     \log{\alpha} &= (\log{\pi{(X_{t+1})}} + \log{q(X_t | X_{t+1})}) - (\log{\pi{(X_t)}}+\log{q(X_{t+1} | X_t)}) 
 \end{align*}
 
-
-\subsection{PyTorch}
-The framework AL4PDE and therefore our extension is written with usage of PyTorch\footnote{https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html}. Pytorch is an open source machine learning library developed by Meta.
-It mainly resolves around the class Tensor, which is a multi-dimensional matrix storing and operating on a single data type. Both the ICs and PDE parameter are stored as such. If an operation is performed using a Tensor, it is stored in an internal graph. PyTorch also provides a method we can apply on a Tensor calles ``backward()''. Here the graph is differentiated using the chain rule, and the gradient is therefore calculated for the current tensor, with regards to the graph leaves. We will utilize this method to calculate the logarithmic gradient of the uncertainty, which we require for the langevin diffusion.
