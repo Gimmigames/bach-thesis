@@ -1,4 +1,5 @@
 \chapter{Method}
+In this chapter we want to discuss the method we want to implement and explain what exactly we are sampling from. First, we will give an overview of the current framework, which is important to understand what inputs we receive and where we send the output. Then we dive deep into the basic class of Markov chain Monte Carlo. The explanation of the basic class is followed by the specific implementation that we will be doing.
 \section{Active learning for PDEs}
 Before we go into more detail about what we are trying to change and implement, we first define the problem scope we are currently in. Our work builds upon and extends the AL4PDE benchmark framework introduced by Musekamp et al. (2025). We first examine the existing AL cycle, which is visualized in Fig.\ref{fig:active-learning-cycle}. 
 
@@ -7,9 +8,9 @@ The active learning process begins with the specification of a target partial di
 To begin the active learning cycle, a small set of random samples is randomly selected from the input space passed as input for the numerical solver, here called ``PDE Solver''. The PDE Solver computes the solution trajectories, which are used to initialize the neural surrogate model.  The starting point is important to estimating the initial uncertainty assosiated with the model's predictions.
 
 The uncertainty for each sample in the pool is quantified using the acquisition function $a_{QbC}$, based on the variance across different predictions across different models.
-\[
+\begin{align}
  a_{QbC}(\psi_i):=\frac{1}{N_tN_xN_c}\sum_{j=1}^{N_t}\sum_{k=1}^{N_x}\frac{1}{N_m}\sum_{m=1}^{N_m}\vert\vert\hat{u}_{i,m}(t_j,x_k)- \overline{\hat{u}_i}(t_j, x_k)\vert\vert^2_2
-\] 
+\end{align} 
 where $\hat{u}_{i,m}$ denotes the prediction of the $m$-th model in the ensemble, and $\overline{\hat{u}_i}$ is the ensemble mean for input sample $\psi_i$ evaluated over all time $t_j$ and space $x_k$. The underlying distribution of the uncertainty is not known completly, it rather can be evaluated pointwise.
 Following this, a pool is constructed, based on random combinations of ICs and PDE parameters. Each sample inside the pool is not labeled and the solution is not known, but the uncertainty can be evaluated using the acquisition function from above.
 
@@ -30,17 +31,17 @@ The query synthesis method we are implementing therefore is located between the 
 \section{Target sampling distribution}
 
 We now take a closer look at the target distributions we aim to sample from. In the case of pool-based active learning with uncertainty as the target, we sample from an underlying distribution based on the evaluated uncertainty of all points in the pool. If we query a batch using SBAL, for example:
-\[
-p_{\text{power}(\psi)}\propto\alpha(\psi)^m\cdot p_{pool}(\psi)
-\]
-$\psi$ is determined based on the points in the pool.
+\begin{align}
+p_{\text{power}(\psi)}\propto\alpha(\psi)^m
+\end{align}
+$\psi$ are the samples inside the pool. If the pool would not be uniformly created, a factor of $p_{pool}(\psi)$ would be added to SBAL.
 
 In contrast, stochastic query synthesis removes the pool entirely, which also changes the nature of the target distribution. Instead of relying on a finite pool, we consider the uncertainty across the entire input space and generate queries accordingly.
 
 \section{Markov chain Monte Carlo}
 If we want to sample directly from the input space, 
 we must somehow determine which samples to sample. 
-In the best case we can query samples from higher uncertainties more often than those with low uncertainty. Since the uncertainty is not known as function, we can not sample from it directly. Here we can exploit the class of algorithms called Markov chain Monte Carlo (MCMC). MCMC creates a chain of states, where each state is dependent on the previous state, and the whole chain is converging to a target distribution $\pi$. Effectivly meanining the difference between the samples created through the chain and samples created by directly sampling from $\pi$ converges to zero.
+In the best case we can query samples from higher uncertainties more often than those with low uncertainty. Since the uncertainty is not known continuously, we can not sample from it directly. Here we can exploit the class of algorithms called Markov chain Monte Carlo (MCMC). MCMC creates a chain of states, where each state is dependent on the previous state, and the whole chain is converging to a target distribution $\pi$. Effectivly meanining the difference between the samples created through the chain and samples created by directly sampling from $\pi$ converges to zero.
 
 MCMC starts with an initial sample $X_1$. The marginal distribution is called the 
 ``initial distribution''~\cite{geyer2011introduction}.
@@ -55,17 +56,16 @@ For a reversible chain, the distribution for $X_{n+1},X_{x+2},\dots,X_{x+k}$ and
 
 Often a burn-in is used, i.e. 
 the first $n$ values of the chain are discarded with the aim of throwing away these samples before the chain converges. 
-According to Geyer ~\cite{geyer2011introduction}, 
-burn-in is unnecessary and starting from a reasonable point - a point you don't mind having in your training set - is just as effective. 
-Therefore, in this paper, it is omitted in all examples.
+According to Geyer~\cite{geyer2011introduction}, burn-in is unnecessary; starting from a reasonable point - ``any point you don't mind having in a sample is a good starting point'' - is just as effective. He goes on to explain that a common best practice is to use the end point from a previous run as the starting point for the next run. However, in our case, because the underlying distribution changes between iterations, we chose to randomly select the starting point. As long as the random sample is not an outlier - and we intend to train our model on this sample - the original guideline still applies.
+Therefore, it is omitted from all examples in this paper.
 
 We still have the problem open on how we want to select the transition probability.
 
 \section{Undajusted Langevin algorithm}\label{sec:ULA}
-As a natural candiate for hte transition probability is Langevin diffusion. The Langevin diffusion is defined as:
-\[
+As a natural candiate for the transition probability is Langevin diffusion. The Langevin diffusion is defined as:
+\begin{align}
     dL_t=dW_t+\frac{1}{2}\nabla \log{\pi(L_t)}dt
-\]
+\end{align}
 where $W_t$ is the standard Brownian motion and $\pi$ is the target density. Note that $\pi$ must be continuously differentiable and non-zero, to ensure a well-defined gradient of the log-density $\nabla\log{\pi}$. 
 
 Intuitively, this seems like a good proposal choice, since 
@@ -77,15 +77,15 @@ If we want to use the diffusion as transition probability, we have to apply the 
     X_{n+1}=N(X_n+\frac{1}{2}h\nabla\log{\pi(X_n)}, hI_k).
 \end{equation}
 where $h$ is the step size.
-The usage of Langevin diffusions as transisiton probability was first introdused by Parisi (1981), and further studied by Grenander and Miller (1994) as well as Roberts and Tweedie (1996). It is commenly reffered to as the ``unadjusted Langevin algorithm''.
+The usage of Langevin diffusions as transisiton probability was first introdused by Parisi (1981), and further studied by Grenander and Miller (1994) as well as Roberts and Tweedie (1996). It is commenly referred to as the ``unadjusted Langevin algorithm''.
 
 However, despite the continuous-time Langevin diffusion having 
 $\pi$ as its invariant distribution, the discretized version does not necessarily preserve this property. As a result, the Markov chain generated by ULA may either converge to an incorrect target distribution or exhibit slow convergence.
 
 In our case, this could be an advantage. ULA may not converge to $\pi$, but due to the construction of the probability distribution, it will sample in the direction of the maximum point of $\pi$. Therefore, we will implement a version of MCMC with ULA as transition probability and call this method single-chain-ULA (SC-ULA). We will also implement a modification of SC-ULA. 
-Since the states sampled from higher uncertainties are more valuable for us, we instead only take the last state as result. To match the amount of samples from SC-ULA, multiple chains are started in parallel. We will call this changed version parallel-chains-ULA (PC-ULA).
+Since the states sampled from higher uncertainties are more valuable for us, we instead only take the last state as result. To match the amount of samples from SC-ULA, multiple chains are started in parallel. We will call this changed version parallel-chains-ULA (PC-ULA). 
 
-If we want to ensure the correct convergence we have to combine ULA with Metropolis-Hastings.
+Both methods focus on sampling in the direction of maximum uncertainty, which can lead to a lack of diversity in the samples. To overcome this, we can modify the approach so that instead of always sampling towards the point of maximum uncertainty, it samples from the entire uncertainty. This can be achieved by combining the ULA with the Metropolis-Hastings algorithm.
 \section{Metropolis-Hastings algorithm}
 The Metropolis-Hastings algorithm is one possible implementation of constructing the Markov chain in MCMC and 
 is developed by Hastings~\cite{hastings1970}. The algorithm is a further developlment of the Metropolis algorithm, which was introduced by Metropolis et al.~\cite{metropolis1953}.
@@ -96,13 +96,13 @@ The proposal kernel is a probabalistic function, and is proposing a new state $X
 The transition from the Markov state $X_t$ to $X_{t+1}$ is then defined as follows:
 Sample a new State  $X_{t+1}$ from $q(X_{t+1} | X_t)$. 
 The acceptance probability is then defined as: 
-\[ 
+\begin{align} 
     \alpha(X_t, X_{t+1}) = 
     \begin{cases}
         \min \left\{ \frac{\tilde{\pi}(X_{t+1}) q(X_t|X_{t+1} )}{\tilde{\pi}(X_t) q(X_{t+1}|X_t)}, 1 \right\} & \text{if } \tilde{\pi}(X_t)q(X_{t+1}|X_t)>0 \\
         1 & \text{otherwise}
     \end{cases}     
-\]
+\end{align}
 The proposal is therefore accepted with the probabilty $\alpha(X_t,X_{t+1})$.
 This is known as Metropolis-Hastings step and if accepted, then set $X_{t+1}=X_{t+1}$, otherwise $X_{t+1}  = X_t$ and restart the process. 
 Importantly this also means if the sample is rejected, the sample before is twice in the chain.
@@ -118,29 +118,29 @@ We have access to the gradient of the uncertainty, and for a faster convergence 
 \subsection{Metropolis adjusted Langevin algorithm}\label{sec:MALA}
 Since ULA alone is not necessarily converging to the correct distribution, it can rather be used as proposal kernel for Metropolis-Hastings. It takes advantage of the Metropolis-Hastings step, while keeping the discretised Langevin diffusion as a proposal.
 The next suggestion is therefore fetched with:
-\[
+\begin{align}
 q(X_{n+1} | X_n)=N(X_{n}+\frac{1}{2}h\nabla\log{\pi(X_{n})}, hI_k)
-\]
+\end{align}
 then compute the acceptance probability:
-\[
+\begin{align}
     \alpha(X_t,X_{t+1}) = 
     \begin{cases}
         \min \left\{ \frac{\tilde{\pi}(X_{t+1}) q(X_t|X_{t+1} )}{\tilde{\pi}(X_t) q(X_{t+1}|X_t)}, 1 \right\} & \text{if } \tilde{\pi}(X_t)q(X_{t+1}|X_t)>0 \\
         1 & \text{otherwise}
     \end{cases}    
-\]
+\end{align}
 
 To make it more understandable how we are going to implement it, we will first transform the formulas. We can rewrite $q$ as following~\cite{RobertsRosenthal}: 
-\[
+\begin{align}
 q(X_{n+1} | X_n)=\frac{1}{2\pi\epsilon}\cdot \exp{\left[\frac{-1}{2\epsilon}\vert\vert X_{n+1}- X_n - \frac{\epsilon}{2}\nabla\log{\pi(X_t)}\vert\vert^2_2\right] }
-\]
+\end{align}
 Instead of calculating $q$ like this, we will firstly compute the natural logarithm, and since we are using a ratio, we can leave out the constants. Doing all of this will change it to:
-\[
+\begin{align}
 q(X_{n+1} | X_n)-\frac{1}{\epsilon}\cdot\sum(X_{n+1}-X_{n}-\frac{\epsilon}{2}\nabla\log{\pi(X_n)})^2
-\]
+\end{align}
 If we still want to calculate $\alpha$ correctly, we will look at the logarithm of $\alpha$:
-\begin{align*}
+\begin{align}
     \log{\alpha} &= \log\left(\frac{\tilde{\pi}(X_{t+1}) q(X_t|X_{t+1} )}{\tilde{\pi}(X_t) q(X_{t+1}|X_t)}\right) \\
     \log{\alpha} &= (\log{\pi{(X_{t+1})}} + \log{q(X_t | X_{t+1})}) - (\log{\pi{(X_t)}}+\log{q(X_{t+1} | X_t)}) 
-\end{align*}
+\end{align}
 

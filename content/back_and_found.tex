@@ -1,16 +1,25 @@
-\chapter{Background \& Foundations}\label{chap:k2}
-We will have a look at the fundemental requierments required to understanding this work. This will include basic mathematical knowledge - but also more specific ones, to understand the current implementation.
+\chapter{Foundations}\label{chap:k2}
+We begin by outlining the basic requirements for understanding this work. This includes all essential concepts related to active learning for neural PDE solvers. First, we will explain what a partial differential equation (PDE) is and why solving PDEs is important. Next, we will introduce autoregressive neural PDE solvers and discuss how they work. Finally, we will explain the basic principles of active learning and go through more detailed variations used in this work.
 \section{Partial Differential Equations}
 Since this paper is about solving partial differential equations (PDEs) with neural networks, it is important to understand what exactly a PDE is. 
-We have a D-dimensional spatial domain $\mathcal{X}$, $x = [x_1,x_2,\dots,x_D]^\top \in \mathcal{X}$, and a temporal domain $t\in[0, T]$ (Brandstetter et al., 2021):
-\begin{align} &\partial_t u = F(\lambda,t,x,u,\partial_xu,\partial_{xx}u,\dots), && (t,x)\in[0,T]\times \mathbb{X} \\ &u(0,x)=u^0(x),\hspace{2cm}\mathcal{B}[u](t,x)=0 && x\in\mathbb{X}, (t,x)\in[0,T]\times\partial\mathbb{X} \end{align}
-We want to know the unique solution $u: [0,T]\times\mathbb{X}\rightarrow\mathbb{R}$ with the initial conditions (IC) $u(0,x)=u^0(x)$ and its boundary conditions $\mathcal{B}[u](t,x)=0$. The PDE parameters are represented by the vector $\lambda = (\lambda_1, \lambda_2,\dots, \lambda_l) \in\mathbb{R}^l$ with $lambda_i\in[a_i, b_i]$ and can influence the underlying system. 
+We have a D-dimensional spatial domain $\mathcal{X}$, $x = [x_1,x_2,\dots,x_D]^\top \in \mathcal{X}$, and a temporal domain $t\in[0, T]$ (Brandstetter et al., 2022):
+\begin{align} 
+    &\partial_t u = F(\lambda,t,x,u,\partial_xu,\partial_{xx}u,\dots), && (t,x)\in[0,T]\times \mathbb{X} \\ &u(0,x)=u^0(x),\hspace{2cm}\mathcal{B}[u](t,x)=0 && x\in\mathbb{X}, (t,x)\in[0,T]\times\partial\mathbb{X} 
+\end{align}
+We want to know the unique solution $u: [0,T]\times\mathbb{X}\rightarrow\mathbb{R}$ with the initial conditions (IC) $u(0,x)=u^0(x)$ and its boundary conditions $\mathcal{B}[u](t,x)=0$. The PDE parameters are represented by the vector $\lambda = (\lambda_1, \lambda_2,\dots, \lambda_l) \in\mathbb{R}^l$ with $\lambda_i\in[a_i, b_i]$ and influence the underlying system. 
 The initial conditions describe the initial state of the system, while the boundary conditions define the PDE at the definition boundaries. 
 Both conditions are necessary to obtain a unique solution.
 PDEs play an important role in the modern world of physics, for example in the heat equation, which describes how heat is distributed in an area over time:
-\[ \lambda\partial_tu=\Delta u \] with $\Delta u = \sum^d_{i=1}\partial_{x^ix^i}u$. 
+\begin{align} 
+    \lambda\partial_tu=\Delta u 
+\end{align} 
+with $\Delta u = \sum^d_{i=1}\partial_{x^ix^i}u$, in $d$-dimensions.
 \section{Autoregressive Neural PDE solvers}
-
+Neural PDE solvers can be broadly divided into two categories: Neural operator methods and autoregressive methods. Neural operator methods aim to learn a global mapping from input conditions (e.g. initial conditions and PDE parameters) to the entire solution trajectory. These models are typically designed to generalise across different resolutions, geometries or boundary conditions. Autoregressive methods, on the other hand, follow a time marching approach, solving PDEs iteratively by advancing the solution one time step at a time. The process of repeatedly feeding the output state as input for the next step is called rollout. In this setting, the model learns a temporal forward operator $\mathcal{A}$ so that the system evolves according to 
+\begin{align}
+    u(t+\Delta t)=\mathcal{A}(\Delta t, u(t))
+\end{align}   
+where $\mathcal{A}:\mathbb{R}_{>0}\times\mathbb{R}^N\rightarrow\mathbb{R}^N$ acts as a learned surrogate for the underlying dynamics~\cite{brandstetter2022message}. This autoregressive formulation is particularly suitable for time-dependent PDEs.
 \section{Active learning}
 Before we explain active learning - a subfield of machine learning - 
 we have to explain how machine learning itself works. In the words of Ayodele (2010): ``Machine
@@ -38,9 +47,9 @@ The variance between them can give us an indication about
 how informative the sample will be. 
 The informativeness therefore called ``uncertainty'' and is modeled via a probabalistic function, with a 
 Query-by-Committee algorithm (Seung et al. 1992):
-\[
+\begin{align}
  a_{QbC}(\psi_i):=\frac{1}{N_tN_xN_c}\sum_{j=1}^{N_t}\sum_{k=1}^{N_x}\frac{1}{N_m}\sum_{m=1}^{N_m}\vert\vert\hat{u}_{i,m}(t_j,x_k)- \overline{\hat{u}_i}(t_j, x_k)\vert\vert^2_2
-\] 
+\end{align} 
 We have now established a way to define the information content of a sample, but we have yet to explore how samples are actually queried in active learning. Broadly speaking, active learning employs three main strategies, which are illustrated in a simplified manner in Fig.~\ref{fig:AL-overview}.
 
 In pool-based active learning, a collection of samples is first drawn from the input space. The learner then selects specific samples from this pool to query the oracle. In contrast, membership query synthesis (in this work referred to as stochastic query synthesis) bypasses the predefined pool altogether. Instead, the learner queries directly from the input space - or creates completly new unlabeled instances to query.
@@ -52,7 +61,7 @@ Finally, in stream-based selective sampling, samples arrive sequentially from th
     \caption{The three main methods of active learning by Settels~\cite{settles2009active}}.
     \label{fig:AL-overview}
 \end{figure}
-\subsection{Pool-Based active learning}
+\subsection{Pool-based active learning}
 The pool-based approach is about sampling a large pool 
 of unlabeled instances from the original instance 
 space/input distribution. Samples from this pool then 
@@ -94,22 +103,23 @@ $\mathcal{B} = \{x_1,x_2,...,x_b\}\subseteq U$
 is selected based on an acquisition function $a$.
 One common method how to generate a batch is to query the $K$ samples with the highest uncertainty, also known as Top-$K$.
 The uncertainty is thereby evaluated at each sample inside the pool.
-\[
-a_s^{\text{batch}}(\mathcal{I}^{\text{train}};K) := arg\,max_{I\subseteq\mathcal{I}^{\text{pool}},\lvert I\rvert = K}\sum_{i\in I}s(i;\mathcal{I}^{\text{train}})
-\]    
+\begin{align}
+a_s^{\text{batch}}(\mathcal{I}^{\text{train}};K) := \text{arg max}_{I\subseteq\mathcal{I}^{\text{pool}},\lvert I\rvert = K}\sum_{i\in I}s(i;\mathcal{I}^{\text{train}})
+\end{align}    
 with $a$ being the acquisition function, 
 $\mathcal{I}^{\text{train}}$ being the indices of the samples 
 in the training data set and $\mathcal{I}^{\text{pool}}$ being the indices 
 of the samples in the pool data set~\cite{kirsch2021stochastic}.
 \subsection{Stochastic batch active learning}
-Selecting the Top-$K$ instances can lack diversity, therefore
-Kirsch et al.~\cite{kirsch2021stochastic} introduced stochastic batch 
+Top-$K$ selection based on uncertainty alone can result in very similar samples, thereby reducing diversity. This, in turn, may reduce the information contribution of each selected sample, potentially hindering the learning efficiency of the model.
+Therefore Kirsch et al.~\cite{kirsch2021stochastic} introduced stochastic batch 
 active learning (SBAL). SBAL samples without replacement the input 
-$\psi$ from the pool $S_{\text{pool}}$ with the probability distribution 
-\[p_{\text{power}(\psi)}\propto\alpha(\psi)^m\cdot p_{pool}(\psi)\] 
+$\psi$ from the pool $U^n$ with the probability distribution 
+\begin{align}
+    p_{\text{power}(\psi)}\propto\alpha(\psi)^m
+\end{align} 
 with $m$ being a 
-hyperparameter, that is controlling the sharpness of the distribution. Since the pool is uniformly sampled, $p_{pool}(\psi)$ is equal to one and cancels out.
-
+hyperparameter, that is controlling the sharpness of the distribution. 
 
 
 \subsection{Query synthesis active learning}
@@ -117,7 +127,7 @@ Creating and evaluating the pool can be quite costly, especially if the pool siz
 this problem, another active learning method ``Query synthesis'' was introduced~\cite{Angluin1988}. 
 Query synthesis samples to the oracle directly from the input space or can even create new samples to query~\cite{wang2015active}.
 
-For us this means to query samples directly to the numerical solver, which can be a great advantage for us. Utilizing the uncertainty, we can potentially sample from regions with higher uncertainties than it would be possible for pool-based methods  - since we are not bound to a specific fixed amount of samples. One advantage for us is the ability to calculate the gradient of the uncertainty, which allowes us to sample from regions with the highest uncertainty.
+For us this means to query samples directly to the numerical solver. This can be a big advantage for us, because we can potentially sample from regions with higher uncertainties than would be possible with pool-based methods. This is due to the fact that we are not constrained to a certain fixed number of samples, which could leave out potential sample areas with a higher uncertainty. An additional benefit for us is the ability to calculate the gradient of uncertainty, allowing us to sample from regions with the highest uncertainty.
 
 The challenge here is to choose a fitting algorithm, defining the 
 query strategy. 

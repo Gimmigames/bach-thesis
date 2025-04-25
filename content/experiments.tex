@@ -1,87 +1,86 @@
 \chapter{Experiments}
 All experiments are based on the AL4PDE framework.
-For this work, we sample from the Combined Equation (CE), proposed by Brandstetter et al. (2021):
+For this work, we sample from the Combined Equation (CE), proposed by Brandstetter et al. (2022):
 \begin{align}
-    [\partial_t u+\partial_x (\alpha u^2-\beta\partial_x u+\gamma\partial_{xx}u)]=\delta(t,x),\\ u(0,x)=\delta(0,x),\hspace{2cm}\delta(t,x)=\sum_{j=1}^J A_j \sin(\omega_jt+2\pi l_jx/L+\phi_j) \end{align}
+    [\partial_t u+\partial_x (\alpha u^2-\beta\partial_x u+\gamma\partial_{xx}u)]=0,
+\end{align}
 It is called combined because the PDE parameters give rise to different equations. 
 If we summarise the parameters as $\theta_{PDE}=(\alpha,\beta,\gamma)$, we have $\theta_{PDE}=(0,\eta,0)$, which is the heat equation.
 Or, with $\theta_{PDE}=(0.5,\eta,0)$ we get the Burgers equation~\cite{burgers}, which is used for fluid simulations.
 The boundary condition is periodic, and we have a slightly different IC generator that removes random frequency bins. This is required 
-to allow us to get a continuous function for the gradient calculation. As PDE Parameters for the 
+to allow us to get a continuous function for the gradient calculation. As PDE parameters for the 
 input space we have $\alpha$, $\beta$ and $\gamma$.    
 The experiments were conducted using an ensemble of two U-Nets. 
 The query synthesis method is compared against random sampling, which queries random samples from the input space, and the old pool-based approach, with different pool sizes. 
-\subsection{Metropolis adjusted Langevin algorithm}
+\section{Metropolis adjusted Langevin algorithm}
 The error for the MALA algorithm with different step sizes is shown at Fig. ~\ref{fig:MALA-loss}. 
 We can see on the x-axis the required amount of samples 
 for our numerical solver to label. The required amount of samples is doubled each active learning iteration, therefore 
 the chain size also has to be doubled, starting with 256 samples.
 On the y-axis we see the root mean square error (RMSE). 
 Since we compare the loss to a random sampling, we can conclude MALA, is decreasing the loss slower than just random sampling. In this case, since even random sampling yields better results, there is no need to further compare it to the currently existing AL strategies.
-The main reason for the bearly decreasing loss are parameters that appear multiple times or more than once in the chain. 
-If the numerical solver solves the same PDE with the same ICs and adds them to the training set, 
-our neural network will thereby be trained with the same parameters - and the neural network ``learns'' nothing new.
-\begin{figure}
-    \caption{Error function from MALA and Random selection.}
-    \includegraphics{../data/random_mala.pdf}
+The main reason for the marginal decrease in loss is the repeated occurrence of samples in a chain. If a sample appears multiple times in the chain and is queried repeatedly - paired with its label - to the surrogate neural model, the model has already extracted the relevant information during the first query. As a result, the additional instances contribute little to no new information, so these duplicate samples are redundent.
+\begin{figure}[!ht]
+    \caption{Loss functions from MALA with different chain sizes, and a uniformly random selection. The error from each MALA implementation is only decreasing slowly.}
+    \includegraphics[scale=1.3]{../data/random_mala.pdf}
     \centering
     \label{fig:MALA-loss}
 \end{figure}
 
-\subsection{SC-ULA}
+\section{SC-ULA}
 We solve this by removing the Metropolis-Hastings step, and just accepting every state proposed. This comes with the 
 disadvantage of not converging to the target density $\pi$, but we will still sample from regions with higher uncertainties. 
 By removing the acceptance step we are sampling with the unadjusted Langevin algorithm, described in Section~\ref{sec:ULA}.
-The error function, with the loss on the y-axis and the amount of samples on the x-axis, is displayed in Fig.~\ref{fig:SC-ULA-loss}. 
+The error function, with the error on the y-axis and the amount of samples on the x-axis, is displayed in Fig.~\ref{fig:SC-ULA-loss}. 
 As we can see, the loss is steadily decreasing in contrast to the previous MALA implementation. Hoever, SC-ULA is still only comparable to a uniformly random selection. 
-\begin{figure}
-    \caption{Error function from SC-ULA and Random selection.}
-    \includegraphics{../data/SC-ULA.pdf}
+\begin{figure}[!ht]
+    \caption{Loss functions from SC-ULA, uniformly random selection and two SBAL implementations with different pool sizes. The error from the SC-ULA implementation is decreasing at the same rate as the random selection.}
+    \includegraphics[scale=1.3]{../data/SC-ULA.pdf}
     \centering
     \label{fig:SC-ULA-loss}
 \end{figure}
-\subsection{PC-ULA}
+\section{PC-ULA}
 Since we use the gradient to sample from higher uncertainties, and repeating this process over and over again, later states in the Markov chain should be more beneficial for us then earlier ones. We can make use of that by instead of using the complete chain as input, we rather only take later states. This corresponds to PC-ULA, described in Section~\ref{sec:ULA}.
 
 To still match the amount of samples we use as input for the numerical solver, we also need more chains. 
-If we only take the last state, the chainsize can be choosen freely - for the experiments we set it to 1024 - but we require an amount of parallel chains matching the input for the numerical solver.
+If we only take the last state, the chain size can be choosen freely - for the experiments we set it to 1024 - but we require an amount of parallel chains matching the input for the numerical solver.
 The error function of PC-ULA, compared against a random selection and two SBAL methods, with the pool-size being ten thousand and one million are shown in Fig. \ref{fig: ULA-parallel}
-\begin{figure}
-    \caption{Error function PC-ULA in comparision to existing methods}
-    \includegraphics{../data/ULA_parallel.pdf}
+\begin{figure}[!ht]
+    \caption{Loss functions from PC-ULA, uniformly random selection and two SBAL implementations with different pool sizes. The error from the PC-ULA implementation is decreasing at the same rate as both SBAL varaitions.}
+    \includegraphics[scale=1.3]{../data/ULA_parallel.pdf}
     \centering
     \label{fig: ULA-parallel}
 \end{figure}
 Again we can see the loss on the y-axis and the numbers of samples on the x-axis. 
 As we can see, even with parallel chains we are currently as good as the current implementations, but not better. 
 If we look at the selection time in Fig.\ref{fig:ULA-parallel-time}, we can see that the doubling of the samples goes hand in hand with a doubling of the selection time, which is given in seconds on the y-axis. This is due to the duplication of the amount of initial samples we use for the chain creation.
-\begin{figure}
-    \caption{ULA Parallel selection time}
-    \includegraphics{../data/ULA_parallel_time.pdf}
+\begin{figure}[!ht]
+    \caption{The selection time of PC-ULA in comparison to uniformly random selection and two SBAL implementations with different pool sizes. The selection rate of PC-ULA is initially at the same value as SBAL with a pool size of one million, but is proportional to the number of samples queried.}
+    \includegraphics[scale=1.3]{../data/ULA_parallel_time.pdf}
     \centering
     \label{fig:ULA-parallel-time}
 \end{figure}
 We can reduce the chain size per sample to decrease our selection cost. This is illustrated in Fig. \ref{fig:selection-time}
-\begin{figure}
-    \caption{Selection time comparision}
-    \includegraphics{../data/selection_time.pdf}
+\begin{figure}[!ht]
+    \caption{The selection time of PC-ULA with different chain sizes. This illustrates the proportionality between chain size and selection time.  }
+    \includegraphics[scale=1.3]{../data/selection_time.pdf}
     \centering
     \label{fig:selection-time}
 \end{figure}
 For all chain sizes we use the same ULA algorithm with the same number of parallel samples. The only difference is the number of times ULA is applied to generate the next sample. We can see quite clearly that if we halve our chain size, the selection time is also halved. 
 However, there is a downside. As the number of steps the algorithm does towards the gradient is reduced, the number of samples with higher uncertainties is also reduced.
 This is visualized in Fig.\ref{fig:loss-comparision}. 
-\begin{figure}
-    \caption{Loss reduction with different chain sizes}
-    \includegraphics{../data/chain-size-comp.pdf}
+\begin{figure}[!ht]
+    \caption{The loss function is illustrated, with different chain sizes for PC-ULA in comparison to a random selection. Although each different chain size improved compared to the random selection, if one chain was longer than another, the error was reduced at a higher rate.}
+    \includegraphics[scale=1.3]{../data/chain-size-comp.pdf}
     \centering
     \label{fig:loss-comparision}
 \end{figure}
 With respect to the limited amount of simulations done, we can see that the longer the chain, the better the reduction of the loss.   
 
 To have a clearer understanding on how the parameters are changed, we can have a look at the changing rates from an example chain. In Fig.~\ref{fig:pde-parameter} we can see on the x-axis the 1024 states from the Markov chain, with the values on the y-axis. Through the small changes per sample, the dependency of the previous state is vividly illustrated.
-\begin{figure}
-    \caption{Changes in the PDE parameters per state}
+\begin{figure}[!ht]
+    \caption{Changes in the PDE parameters per state for one chain with the size 1024. Because one state is dependent on the previous state, the changes between two neighbors are relatively small. }
     \includegraphics[width=\textwidth]{../data/pde_params.png}
     \centering
     \label{fig:pde-parameter}
@@ -90,13 +89,13 @@ To have a clearer understanding on how the parameters are changed, we can have a
 The initial conditions are split between the amplitude and the phase. To have a visually appealing graph, they are displayd seperatly. The amplitdude is displayed in Fig.~\ref{fig:IC-amp} and the phase in Fig.~\ref{fig:IC-phi}. 
 As we can see if the proposals are propsing new states further than the boundary, they are cropped back to the edges of the boundary conditions.
 \begin{figure}
-    \caption{Changes in the amplitude for the IC per state}
+    \caption{Changes in the amplitude for the IC per state for one chain with the chain size 1024. Values exceeding the definition boundaries are cropped, and because of the dependency, changes between neighbors are relatively small. }
     \includegraphics[width=\textwidth]{../data/amp.png}
     \centering
     \label{fig:IC-amp}
 \end{figure}
 \begin{figure}
-    \caption{Changes in the phase for the IC per state}
+    \caption{Changes in the amplitude for the IC per state for one chain with the chain size 1024. Values exceeding the definition boundaries are cropped, and because of the dependency, changes between neighbors are relatively small.}
     \includegraphics[width=\textwidth]{../data/phi.png}
      \centering
     \label{fig:IC-phi}

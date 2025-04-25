@@ -2,20 +2,20 @@
 Before we go over to the actual pseudocode explaining the different sampling methods are implemented, we first discuss important notes for the framework.
 \section{PyTorch}
 The framework AL4PDE and therefore our extension is written with usage of PyTorch\footnote{https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html}. Pytorch is an open source machine learning library developed by Meta.
-It mainly resolves around the class Tensor, which is a multi-dimensional matrix storing and operating on a single data type. Both the ICs and PDE parameter are stored as such. If an operation is performed using a Tensor, it is stored in an internal graph. PyTorch also provides a method we can apply on a Tensor calles ``backward()''. Here the graph is differentiated using the chain rule, and the gradient is therefore calculated for the current tensor, with regards to the graph leaves. We will utilize this method to calculate the logarithmic gradient of the uncertainty, which we require for the langevin diffusion.
+It mainly resolves around the class Tensor, which is a multi-dimensional matrix storing and operating on a single data type. Both the ICs and PDE parameter are stored as such. If an operation is performed using a Tensor, it is stored in an internal graph. PyTorch also provides a method we can apply on a Tensor called ``backward()''. Here the graph is differentiated using the chain rule, and the gradient is therefore calculated for the current tensor, with regards to the graph leaves. We will utilize this method to calculate the logarithmic gradient of the uncertainty, which we require for the Langevin diffusion.
 \section{PDE and IC parameters}
 Since we are in the context of a Markov chain, we always have the data underlying from the previous state. 
 Intuitivly, the data would be the PDE parameter and the IC from the previous state, but in the framework AL4PDE a small change is done.
 Instead of directly sampling from the PDE parameters, we sample from a normalized version, with a value between 0 and 1. To transform the normalized parameters to the correct ones, firstly the minimum and maximum value of the PDE are calculated:
-\begin{align*}
+\begin{align}
     cont_{min} &= [\alpha_{min},\beta_{min},\gamma_{min}]+[A_{min}]\cdot5+[\omega_{min}]*5+[0]\cdot5\\
     cont_{max} &= [\alpha_{max},\beta_{max},\gamma_{max}]+[A_{max}]\cdot5+[\omega_{max}]*5+[2\pi]\cdot5
-\end{align*}
+\end{align}
 Each parameter $\alpha,\beta,\gamma$ has the minimal value 0 and the maximum value of 1. The same holds true for the amplitude $A$ and the phase $\omega$. 
 Using the values of $cont_{min}$ and $cont_{max}$, the PDE parameter is calculated via:
-\[
+\begin{align}
 cont = cont_{norm}\cdot(cont_{max}-cont_{min})+cont_{min}
-\]
+\end{align}
 with $cont_{norm}$ being the normalized parameter. This behaviour is similar for the ICs. 
 Firstly, only parameters for the ICs are fetched, and evaluated to the final ICs, with the PDE parameters. The IC parameters are defined through the underlying PDE, e.g. an amplitude or a phase.
 
@@ -27,7 +27,7 @@ Since the maximum value of the amplitude and the phase is 1 and the minimal valu
 The first step to a working MALA implementation, is defining the proposal kernal described in Eq.~\ref{eq:langevin-diffusion}. 
 If we use that knownledge of the parameters for the construction of the Markov chain, instead of directly create a proposal for the ICs and PDE parameters, we rather create a proposal for the IC parameters and the normalized PDE parameters.
 This process is demonstrated in Alg. ~\ref{alg:MALA-proposal}. Where $icp$ represents the parameters for an initial condition, and $pdepn$ for the normalized PDE parameters. The $step\_size$ is the learning rate which we can set via a hyperparameter. $I$ is the identity and we take a sample from the normal distribution using $.sample()$.
-\begin{algorithm}
+\begin{Algorithmus}
     \caption{MALA proposal generation}
     \label{alg:MALA-proposal}
     \begin{algorithmic}[1] 
@@ -38,14 +38,13 @@ This process is demonstrated in Alg. ~\ref{alg:MALA-proposal}. Where $icp$ repre
             \State \textbf{return} $icp\_prop, pdepn\_prop$
         \EndFunction
     \end{algorithmic}
-\end{algorithm}
-
+\end{Algorithmus}
 
 To get the values for $icp.grad$ and $pdep.grad$ we have access to the gradient of $icp$ and $pdep$, which was calculated by applying the $.backward()$ from PyTorch function on the uncertainty. Crucially, if a propsal is outside of the definition boundary, it is cropped back to the definition boundary. This could potentially lead to duplicates, however with a small enough step size, this problem can be avoided.
 After we generate a proposal (and for the initial Markov state) we calculate the gradient on the logarithmic uncertainty shown in Alg.~\ref{alg:unc-calc}:
   
-\begin{algorithm}
-    \caption{uncertainty gradient evaluation}
+\begin{Algorithmus}
+    \caption{Uncertainty gradient evaluation}
     \label{alg:unc-calc}
     \begin{algorithmic}[1] 
         \Function{uncertainty\_calculation}{$ic, pdep$}
@@ -54,7 +53,7 @@ After we generate a proposal (and for the initial Markov state) we calculate the
             \State $log\_unc.backward()$
         \EndFunction
     \end{algorithmic}
-\end{algorithm}
+\end{Algorithmus}
 
 As soon as a propsal was made, we perform the Metropolis-Hastings step done for MALA. For the calculation we will use the transformation described in Sec.~\ref{sec:MALA}.
 If the ratio is higher than a random number between 0 and 1, we accept.
@@ -63,7 +62,7 @@ as base for our next iteration. If we reject, the old values are saved in the Ma
 again as base for our next iteration. This comes with the consequence of having samples multiple times
 in the Markov chain. The metropolis can be seen in Alg.~\ref{alg:metropolis}
 With $unc\_old(IC, \lambda)$ we denote the uncertainty created with the IC and the PDE parameters $\lambda$. 
-\begin{algorithm}
+\begin{Algorithmus}
     \caption{Metropolis-Hastings step}
     \label{alg:metropolis}
     \begin{algorithmic}[1] 
@@ -78,11 +77,11 @@ With $unc\_old(IC, \lambda)$ we denote the uncertainty created with the IC and t
             \EndIf
         \EndFunction
     \end{algorithmic}
-\end{algorithm}
+\end{Algorithmus}
 If we put everything together, the whole code is in Alg. ~\ref{alg:MALA}. To start the Markov chain, the first values are drawn at random, from samples that have not been trained on.
  
-\begin{algorithm}
-    \caption{Pseurdocode for MALA}
+\begin{Algorithmus}
+    \caption{Pseudocode for MALA}
     \label{alg:MALA}
     \begin{algorithmic}[1] 
         \Function{MALA}{$chain\_size, step\_size$}
@@ -99,14 +98,14 @@ If we put everything together, the whole code is in Alg. ~\ref{alg:MALA}. To sta
         \State \textbf{return } $complete\_list$
         \EndFunction
     \end{algorithmic}
-\end{algorithm}
+\end{Algorithmus}
 
 At the end we have a Markov chain containing $chain\_size$ samples. We then used the whole chain as input for our numerical solver to generate a solution and thereby 
 used as training set for our neural PDE solver. 
 
 \section{SC-ULA}
 For the implementation of SC-ULA, instead of the Metropolis-Hastings step, it rather just updates all parameters accordingly. The created chain then is further processed by the numerical solver.
-\begin{algorithm}
+\begin{Algorithmus}
     \caption{Pseudocode for SC-ULA}
     \label{alg:SC-ULA}
     \begin{algorithmic}[1] 
@@ -125,14 +124,14 @@ For the implementation of SC-ULA, instead of the Metropolis-Hastings step, it ra
         \State \textbf{return } $complete\_list$
         \EndFunction
     \end{algorithmic}
-\end{algorithm}
+\end{Algorithmus}
 
 \section{PC-ULA}
 To modify SC-ULA for use in PC-ULA, we can use SC-ULA as a base. Instead of initializing a single tuple of values, we create $n$ tuples in parallel. Since we're using PyTorch, parallel computation is supported by default, so the core code remains largely unchanged-only the dimensionality of the tensors increases.
 
 The algorithm begins by sampling the first $n$ values, which serve as the starting points for the chains. It then calculates the uncertainty for each of these $n$ values and generates the corresponding proposal states in parallel. At the end of the process, the algorithm discards the first $n - 1$ states, retaining only the final one.
 
-\begin{algorithm}
+\begin{Algorithmus}
     \caption{Pseudocode for PC-ULA}
     \label{alg:PC-ULA}
     \begin{algorithmic}[1] 
@@ -152,7 +151,7 @@ The algorithm begins by sampling the first $n$ values, which serve as the starti
         \State \textbf{return } $complete\_list$
         \EndFunction
     \end{algorithmic}
-\end{algorithm}
+\end{Algorithmus}
 
 
 

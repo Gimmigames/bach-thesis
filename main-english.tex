@@ -83,9 +83,10 @@
 PDEs are highly influential in physics and are describing various phenomena
 in the world, from wave movement to electro-magnetics. The problem arises
 when one tries to solve them, which requires enormous computing power for a
-numerical solution. Therefore, Musekamp et al. created a benchmark, which
-investigates active learning for neural PDE solvers. 
-However, neural PDE solvers require training data from an computationally expensive numerical solver. Active learning can reduce the amount of data - called labels -  required, while keeping the same performance. In this
+numerical solution. To overcome the limitiations, neural PDE solvers have been proposed, 
+using neural networks to approximate the solution trajectories. 
+However, neural PDE solvers require training data from an computationally expensive numerical solver. Therefore, Musekamp et al. created a benchmark, which
+investigates active learning for neural PDE solvers. Active learning can reduce the amount of data required, while keeping the same performance. In this
 work, we will demonstrate a new strategy of selecting samples called
 stochastic query synthesis. Following this, we will remove the pool currently used and rather 
 create a Markov chain directly from the input space containing unlabeled instances.
@@ -100,7 +101,17 @@ to make it viable in practice.
 
 %Solely for German courses of study
 \section*{Kurzfassung}
-
+PDGs sind einflussreich in der Physik und beschreiben 
+verschiedene Phänomene in der Welt, von der Wellenbewegung bis zur Elektromagnetik. Problematisch wird es, wenn man versucht, sie zu lösen. 
+Um eine numerische Lösung zu erhalten, 
+ist eine enorme Rechenleistung erforderlich. Um diese Einschränkungen zu überwinden, wurden neuronale PDG-Löser vorgeschlagen, die neuronale Netze verwenden, 
+um die Lösungstrajektorien zu approximieren. Neuronale PDG-Solver benötigen jedoch Trainingsdaten von einem rechenintensiven numerischen Solver. Daher haben Musekamp et al. einen Benchmark entwickelt,
+der aktives Lernen für neuronale PDG-Löser untersucht.
+Aktives Lernen kann die Menge der benötigten Trainingsdaten bei gleicher Leistung reduzieren. In dieser Arbeit demonstrieren wir \textit{stochastic query synthesis} als eine
+neue Strategie zur Auswahl von Stichproben. Anstelle des aktuell verwendeten Pools wird eine Markow-Kette aus dem Eingabebereich mit unbeschrifteten Instanzen erzeugt. Die
+Übergangswahrscheinlichkeiten werden durch den \textit{unadjusted Langevin algorithm} definiert, was uns erlaubt, Stichproben unter Ausnutzung der Gradienteninformation zu 
+ziehen. Um dieses Ergebnis zu verbessern, erstellen wir mehrere parallele Markov-Ketten, indem wir nur den letzten Zustand als Eingabe verwenden. 
+Wir werden zeigen, dass diese Art der Implementierung genauso effektiv ist wie die derzeit verwendete Pool-basierte Implementierung. Es gibt jedoch noch Performance-Probleme, die in Zukunft gelöst werden müssen, um den Algorithmus effizient einsetzen zu können.
 
 \cleardoublepage
 
@@ -137,16 +148,10 @@ to make it viable in practice.
 % an der passenden Stelle im Fließtext erzwungen werden.
 
 \listoffigures
-\listoftables
 
 %Wird nur bei Verwendung von der lstlisting-Umgebung mit dem "caption"-Parameter benoetigt
 %\lstlistoflistings
 %ansonsten:
-\ifdeutsch
-  \listof{Listing}{Verzeichnis der Listings}
-\else
-  \listof{Listing}{List of Listings}
-\fi
 
 %mittels \newfloat wurde die Algorithmus-Gleitumgebung definiert.
 %Mit folgendem Befehl werden alle floats dieses Typs ausgegeben
@@ -235,7 +240,7 @@ to make it viable in practice.
 
 \printbibliography
 
-All links were last followed on March 17, 2018.
+All links were last followed on April 25, 2025.
 
 \appendix
 

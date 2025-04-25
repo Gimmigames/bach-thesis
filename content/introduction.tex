@@ -32,7 +32,8 @@ The main advantage is that we can exploit the gradient of uncertainty by samplin
 increase. Unlike pool-based methods, which can become trapped in local optima, query synthesis 
 allows a more global search for informative samples. This is also the main goal of this thesis: 
 to replace the old pool-based method with a query synthesis strategy using the uncertainty of the model as measurement for sample information. More specifically, we want to utilize gradient information of the uncertainty. 
-The gradient information allows us to either sample from the complete underlying distribution, or even sample more often from samples with higher uncertainty.
+
+The gradient information allows us to efficiently sample from the complete underlying distribution, or push the sampling towards higher uncertainties.
 This should be reducing the deviation between actual and expected results 
 compared to the pool-based method, while improving the computational speed.
 
