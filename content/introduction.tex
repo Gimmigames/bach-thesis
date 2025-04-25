@@ -2,9 +2,9 @@
 In deep learning, a key component is the training set from which our model can learn~\cite{LeCun2015}. 
 It consists of the input data and the associated label. For example, if we want our model to recognise pictures of dogs and cats, the input data would be the pictures, and the associated labels would be the classification as dog or cat.
 Usually, the amount of training data is required to be quite large to keep the deviation between the expected output of our model and the actual output small. 
-However, the process of labelling data is not free. Often the computational cost is many times greater than the cost of generating the input itself~\cite{settles2009active}. 
+However, the process of labeling data is not free. Often the computational cost is many times greater than the cost of generating the input itself~\cite{settles2009active}. 
 A common technique to reduce the number of training samples required while still achieving high accuracy is \textit{active learning}.
-Rather than just randomly labelling each piece of input data and using it as training data, 
+Rather than just randomly labeling each piece of input data and using it as training data, 
 we instead apply an algorithm that selects the samples that give us a 
 high amount of information. 
 This has been applied to various fields, e.\,g.\xspace drug discovery ~\cite{REKER201973} 
@@ -14,7 +14,7 @@ The solution to a PDE is typically approximated using a numerical solver, which 
 To reduce the effort, neural PDE solvers have been introduced~\cite{NEURIPS2023_d529b943}, 
 which require a numerical solver for their training data and pass 
 these results on to the neural network. Here we still have 
-the problem of the high cost of labelling by numerical solvers. 
+the problem of the high cost of labeling by numerical solvers. 
 Therefore, pool-based active learning for neural PDE solvers was introduced 
 by Musekamp et al. ~\cite{musekamp2024active} and applied to different neural surrogate models.
 

@@ -1,6 +1,6 @@
 \chapter{Conclusion and Outlook}\label{chap:zusfas}
 The aim of this work was to implement a new active learning (AL) strategy for the existing framework AL4PDE. 
-AL4PDE is an active learning framework in which an ensemble of neural networks approximates the solution trajectories of a PDE. The trainings data consits of a specific PDE with the associated parameters and initial conditions, paired with the belonging solution trajectorie. The solution is provided by a numerical scheme, depending on the PDE. 
+AL4PDE is an active learning framework in which an ensemble of neural networks approximates the solution trajectories of a PDE. The trainings data consits of a specific PDE with the associated parameters and initial conditions, paired with the belonging solution trajectory. The solution is provided by a numerical scheme, depending on the PDE. 
 Our proposed method retains the core principle of using model uncertainty - derived from variance across the ensemble - as a measure of sample informativeness.
 
 Previously, the existing AL strategy uses a pool-based sampling strategy, where a large set of samples is derived from the input space and the uncertainty is evaluated. However, this approach requires calculating the uncertainty for each sample in the pool, which is computationally expensive and limits the sampling to the given pool. 
